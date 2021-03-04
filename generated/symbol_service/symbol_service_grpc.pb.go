@@ -22,7 +22,7 @@ type SymbolServiceClient interface {
 	Create(ctx context.Context, in *CreateSymbolRequest, opts ...grpc.CallOption) (*CreateSymbolResponse, error)
 	Update(ctx context.Context, in *UpdateSymbolRequest, opts ...grpc.CallOption) (*UpdateSymbolResponse, error)
 	Delete(ctx context.Context, in *DeleteSymbolRequest, opts ...grpc.CallOption) (*DeleteSymbolResponse, error)
-	Populate(ctx context.Context, in *PopulateSymbolRequest, opts ...grpc.CallOption) (*PopulateSymbolResponse, error)
+	Details(ctx context.Context, in *SymbolDetailsRequest, opts ...grpc.CallOption) (*SymbolDetailsResponse, error)
 	Recalculate(ctx context.Context, in *RecalculateSymbolRequest, opts ...grpc.CallOption) (*RecalculateSymbolResponse, error)
 }
 
@@ -79,9 +79,9 @@ func (c *symbolServiceClient) Delete(ctx context.Context, in *DeleteSymbolReques
 	return out, nil
 }
 
-func (c *symbolServiceClient) Populate(ctx context.Context, in *PopulateSymbolRequest, opts ...grpc.CallOption) (*PopulateSymbolResponse, error) {
-	out := new(PopulateSymbolResponse)
-	err := c.cc.Invoke(ctx, "/v1.symbol_service.SymbolService/Populate", in, out, opts...)
+func (c *symbolServiceClient) Details(ctx context.Context, in *SymbolDetailsRequest, opts ...grpc.CallOption) (*SymbolDetailsResponse, error) {
+	out := new(SymbolDetailsResponse)
+	err := c.cc.Invoke(ctx, "/v1.symbol_service.SymbolService/Details", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ type SymbolServiceServer interface {
 	Create(context.Context, *CreateSymbolRequest) (*CreateSymbolResponse, error)
 	Update(context.Context, *UpdateSymbolRequest) (*UpdateSymbolResponse, error)
 	Delete(context.Context, *DeleteSymbolRequest) (*DeleteSymbolResponse, error)
-	Populate(context.Context, *PopulateSymbolRequest) (*PopulateSymbolResponse, error)
+	Details(context.Context, *SymbolDetailsRequest) (*SymbolDetailsResponse, error)
 	Recalculate(context.Context, *RecalculateSymbolRequest) (*RecalculateSymbolResponse, error)
 	mustEmbedUnimplementedSymbolServiceServer()
 }
@@ -130,8 +130,8 @@ func (UnimplementedSymbolServiceServer) Update(context.Context, *UpdateSymbolReq
 func (UnimplementedSymbolServiceServer) Delete(context.Context, *DeleteSymbolRequest) (*DeleteSymbolResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
 }
-func (UnimplementedSymbolServiceServer) Populate(context.Context, *PopulateSymbolRequest) (*PopulateSymbolResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Populate not implemented")
+func (UnimplementedSymbolServiceServer) Details(context.Context, *SymbolDetailsRequest) (*SymbolDetailsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Details not implemented")
 }
 func (UnimplementedSymbolServiceServer) Recalculate(context.Context, *RecalculateSymbolRequest) (*RecalculateSymbolResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Recalculate not implemented")
@@ -239,20 +239,20 @@ func _SymbolService_Delete_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SymbolService_Populate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PopulateSymbolRequest)
+func _SymbolService_Details_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SymbolDetailsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SymbolServiceServer).Populate(ctx, in)
+		return srv.(SymbolServiceServer).Details(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/v1.symbol_service.SymbolService/Populate",
+		FullMethod: "/v1.symbol_service.SymbolService/Details",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SymbolServiceServer).Populate(ctx, req.(*PopulateSymbolRequest))
+		return srv.(SymbolServiceServer).Details(ctx, req.(*SymbolDetailsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -300,8 +300,8 @@ var _SymbolService_serviceDesc = grpc.ServiceDesc{
 			Handler:    _SymbolService_Delete_Handler,
 		},
 		{
-			MethodName: "Populate",
-			Handler:    _SymbolService_Populate_Handler,
+			MethodName: "Details",
+			Handler:    _SymbolService_Details_Handler,
 		},
 		{
 			MethodName: "Recalculate",
