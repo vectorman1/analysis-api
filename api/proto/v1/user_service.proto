@@ -38,7 +38,6 @@ message LoginRequest{
 }
 
 message LoginResponse{
-  bool success = 1;
   string token = 2;
 }
 
@@ -48,7 +47,6 @@ message RegisterRequest{
 }
 
 message RegisterResponse{
-  bool success = 1;
   string token = 2;
 }
 

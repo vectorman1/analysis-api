@@ -1,7 +1,7 @@
 syntax = "proto3";
 package v1;
 
-option go_package = "github.com/vectorman1/analysis-api/generated/trading212_service";
+option go_package = "github.com/vectorman1/analysis-api/generated/worker_symbol_service";
 
 import "models.proto";
 
@@ -19,7 +19,7 @@ message RecalculateSymbolsResponse {
   v1.Symbol symbol = 2;
 }
 
-service Trading212Service {
+service WorkerSymbolService {
   rpc RecalculateSymbols (stream v1.Symbol) returns (stream RecalculateSymbolsResponse) {}
 }
 

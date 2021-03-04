@@ -3,6 +3,7 @@ package v1.symbol_service;
 
 import "google/api/annotations.proto";
 import "protoc-gen-swagger/options/annotations.proto";
+import "google/protobuf/timestamp.proto";
 import "models.proto";
 
 option go_package = "github.com/vectorman1/analysis-api/generated/symbol_service";
@@ -45,7 +46,8 @@ message ReadPagedSymbolRequest {
 }
 
 message ReadPagedSymbolResponse {
-  v1.Symbols symbols = 1;
+  repeated v1.Symbol items = 1;
+  uint64 totalItems = 2;
 }
 
 // can get symbols either by ID or Identifier + ISIN
@@ -108,6 +110,72 @@ message RecalculateSymbolResponse {
   int64 totalItems = 5;
 }
 
+message SymbolOverview {
+  string symbolUuid = 1;
+  string description = 2;
+  string country = 3;
+  string sector = 4;
+  string industry = 5;
+  string address = 6;
+  string fullTimeEmployees = 7;
+  string fiscalYearEnd = 8;
+  string latestQuarter = 9;
+  string marketCapitalization = 10;
+  string ebitda = 11;
+  string peRatio = 12;
+  string pegRatio = 13;
+  string bookValue = 14;
+  string dividendPerShare = 15;
+  string dividendYield = 16;
+  string eps = 17;
+  string revenuePerShareTtm = 18;
+  string profitMargin = 19;
+  string operatingMarginTtm = 20;
+  string returnOnAssetsTtm = 21;
+  string returnOnEquity = 22;
+  string revenueTtm = 23;
+  string grossProfitTtm = 24;
+  string dilutedEpsTtm = 25;
+  string quarterlyEarningsGrowthYoy = 26;
+  string quarterlyRevenueGrowthYoy = 27;
+  string analystTargetPrice = 28;
+  string trailingPe = 29;
+  string forwardPe = 30;
+  string priceToSalesRatioTtm = 31;
+  string priceToBookRatio = 32;
+  string evToRevenue = 33;
+  string evToEbitda = 34;
+  string beta = 35;
+  string weekHigh52 = 36;
+  string weekLow52 = 37;
+  string sharesOutstanding = 38;
+  string sharesFloat = 39;
+  string sharesShort = 40;
+  string sharesShortPriorMonth = 41;
+  string shortRatio = 42;
+  string shortPercentOutstanding = 43;
+  string shortPercentFloat = 44;
+  string percentInsiders = 45;
+  string percentInstitutions = 46;
+  string forwardAnnualDividendRate = 47;
+  string forwardAnnualDividendYield = 48;
+  string payoutRatio = 49;
+  string dividendDate = 50;
+  string exDividendDate = 51;
+  string lastSplitFactor = 52;
+  string lastSplitDate = 53;
+  google.protobuf.Timestamp createdAt = 54;
+}
+
+message SymbolDetailsRequest {
+  string uuid = 1;
+}
+
+message SymbolDetailsResponse {
+  v1.Symbol symbol = 1;
+  SymbolOverview details = 2;
+}
+
 service SymbolService {
   rpc ReadPaged (ReadPagedSymbolRequest) returns (ReadPagedSymbolResponse) {
     option (google.api.http) = {
@@ -137,9 +205,9 @@ service SymbolService {
       delete: "/api/v1/symbols/{id}"
     };
   }
-  rpc Populate (PopulateSymbolRequest) returns (PopulateSymbolResponse) {
+  rpc Details (SymbolDetailsRequest) returns (SymbolDetailsResponse) {
     option (google.api.http) = {
-      post: "/api/v1/symbols/populate",
+      get: "/api/v1/symbols/{uuid}/details"
     };
   }
   rpc Recalculate (RecalculateSymbolRequest) returns (RecalculateSymbolResponse) {

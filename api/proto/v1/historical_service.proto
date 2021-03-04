@@ -1,0 +1,61 @@
+syntax = "proto3";
+package v1.historical_service;
+
+import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
+import "protoc-gen-swagger/options/annotations.proto";
+
+option go_package = "github.com/vectorman1/analysis-api/generated/historical_service";
+
+option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
+  info: {
+    title: "Historical Service";
+    version: "1.0";
+    contact: {
+      name: "Dystopia Systems";
+      url: "https://dystopia.systems";
+      email: "admin@dystopia.systems";
+    };
+  };
+  schemes: HTTPS;
+  consumes: "application/json";
+  produces: "application/json";
+  responses: {
+    key: "401";
+    value: {
+      description: "Returned when the request didn't or passed an invalid user token in the request headers.";
+      schema: {
+        json_schema: {
+          type: STRING;
+        }
+      }
+    }
+  }
+};
+
+message Historical {
+  uint64 id = 1;
+  string symbolUuid = 2;
+  repeated float values = 3;
+  google.protobuf.Timestamp forDate = 4;
+  google.protobuf.Timestamp createdAt = 5;
+}
+
+message GetBySymbolUuidRequest {
+  string symbolUuid = 1;
+  google.protobuf.Timestamp startDate = 2;
+  google.protobuf.Timestamp endDate = 3;
+}
+
+message GetBySymbolUuidResponse {
+  repeated Historical items = 1;
+}
+
+service HistoricalService {
+  rpc GetBySymbolUuid(GetBySymbolUuidRequest) returns (GetBySymbolUuidResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/historicals/{symbolUuid}",
+      body: "*"
+    };
+  }
+}
