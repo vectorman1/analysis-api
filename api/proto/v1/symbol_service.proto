@@ -111,7 +111,6 @@ message RecalculateSymbolResponse {
 }
 
 message SymbolOverview {
-  string symbolUuid = 1;
   string description = 2;
   string country = 3;
   string sector = 4;
@@ -164,7 +163,7 @@ message SymbolOverview {
   string exDividendDate = 51;
   string lastSplitFactor = 52;
   string lastSplitDate = 53;
-  google.protobuf.Timestamp createdAt = 54;
+  google.protobuf.Timestamp updatedAt = 54;
 }
 
 message SymbolDetailsRequest {

@@ -2,20 +2,25 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"time"
+
+	"github.com/gofrs/uuid"
+
+	"github.com/vectorman1/analysis/analysis-api/model/db"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx"
 	"github.com/vectorman1/analysis/analysis-api/common"
 	"github.com/vectorman1/analysis/analysis-api/generated/symbol_service"
-	"github.com/vectorman1/analysis/analysis-api/model"
 )
 
 type symbolRepository interface {
-	GetPaged(ctx context.Context, req *symbol_service.ReadPagedSymbolRequest) (*[]model.Symbol, error)
-	InsertBulk(tx *pgx.Tx, timeoutContext *context.Context, symbols []*model.Symbol) (bool, error)
-	DeleteBulk(tx *pgx.Tx, timeoutContext *context.Context, symbols []*model.Symbol) (bool, error)
-	UpdateBulk(tx *pgx.Tx, timeoutContext *context.Context, symbols []*model.Symbol) (bool, error)
+	GetPaged(ctx context.Context, req *symbol_service.ReadPagedSymbolRequest) (*[]db.Symbol, uint, error)
+	GetByUuid(ctx context.Context, uuid string) (*db.Symbol, error)
+	InsertBulk(tx *pgx.Tx, timeoutContext *context.Context, symbols []*db.Symbol) (bool, error)
+	DeleteBulk(tx *pgx.Tx, timeoutContext *context.Context, symbols []*db.Symbol) (bool, error)
+	UpdateBulk(tx *pgx.Tx, timeoutContext *context.Context, symbols []*db.Symbol) (bool, error)
 
 	BeginTx(ctx *context.Context, options *pgx.TxOptions) (*pgx.Tx, error)
 }
@@ -32,11 +37,11 @@ func NewSymbolRepository(db *pgx.ConnPool) *SymbolRepository {
 }
 
 // GetPaged returns a paged response of symbols stored
-func (r *SymbolRepository) GetPaged(ctx context.Context, req *symbol_service.ReadPagedSymbolRequest) (*[]model.Symbol, error) {
+func (r *SymbolRepository) GetPaged(ctx context.Context, req *symbol_service.ReadPagedSymbolRequest) (*[]db.Symbol, uint, error) {
 	// generate query
 	order := common.FormatOrderQuery(req.Filter.Order, req.Filter.Ascending)
 	queryBuilder := squirrel.
-		Select("*").
+		Select("*, count(*) OVER() AS total_count").
 		From("analysis.symbols as s").
 		OrderBy(order).
 		Offset((req.Filter.PageNumber - 1) * req.Filter.PageSize).
@@ -46,29 +51,26 @@ func (r *SymbolRepository) GetPaged(ctx context.Context, req *symbol_service.Rea
 		PlaceholderFormat(squirrel.Dollar)
 	q, args, err := queryBuilder.ToSql()
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	// limit query time to a second
-	tctx, c := context.WithTimeout(ctx, time.Second)
-	defer c()
-
-	conn, err := r.db.Acquire()
+	conn, err := r.db.AcquireEx(ctx)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer conn.Close()
 
-	rows, err := conn.QueryEx(tctx, q, nil, args...)
+	rows, err := conn.QueryEx(ctx, q, nil, args...)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 
 	// read all resulting rows
-	var result []model.Symbol
+	var result []db.Symbol
+	var totalItems uint
 	for rows.Next() {
-		sym := model.Symbol{Currency: model.Currency{}}
+		sym := db.Symbol{Currency: db.Currency{}}
 		if err = rows.Scan(
 			&sym.ID,
 			&sym.Uuid,
@@ -84,29 +86,77 @@ func (r *SymbolRepository) GetPaged(ctx context.Context, req *symbol_service.Rea
 			&sym.DeletedAt,
 			&sym.Currency.ID,
 			&sym.Currency.Code,
-			&sym.Currency.LongName); err != nil {
-			return nil, err
+			&sym.Currency.LongName,
+			&totalItems); err != nil {
+			return nil, 0, err
 		}
 		result = append(result, sym)
 	}
 
-	return &result, nil
+	return &result, totalItems, nil
+}
+
+func (r *SymbolRepository) GetByUuid(ctx context.Context, symbolUuid string) (*db.Symbol, error) {
+	conn, err := r.db.AcquireEx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	u, err := uuid.FromString(symbolUuid)
+	if err != nil {
+		return nil, err
+	}
+
+	queryBuilder := squirrel.
+		Select("*").
+		From("analysis.symbols as s").
+		Join("analysis.currencies as c on s.currency_id = c.id").
+		Where(fmt.Sprintf("uuid = '%s'", u.String())).
+		Limit(1)
+	query, _, err := queryBuilder.ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	sym := db.Symbol{Currency: db.Currency{}}
+	row := conn.QueryRowEx(ctx, query, &pgx.QueryExOptions{})
+	if err = row.Scan(
+		&sym.ID,
+		&sym.Uuid,
+		&sym.CurrencyID,
+		&sym.Isin,
+		&sym.Identifier,
+		&sym.Name,
+		&sym.MinimumOrderQuantity,
+		&sym.MarketName,
+		&sym.MarketHoursGmt,
+		&sym.CreatedAt,
+		&sym.UpdatedAt,
+		&sym.DeletedAt,
+		&sym.Currency.ID,
+		&sym.Currency.Code,
+		&sym.Currency.LongName); err != nil {
+		return nil, err
+	}
+
+	return &sym, nil
 }
 
 // InsertBulk inserts the slice in a single transaction in batches and returns success and error
-func (r *SymbolRepository) InsertBulk(tx *pgx.Tx, timeoutContext *context.Context, symbols []*model.Symbol) (bool, error) {
-	conn, err := r.db.Acquire()
+func (r *SymbolRepository) InsertBulk(tx *pgx.Tx, timeoutContext *context.Context, symbols []*db.Symbol) (bool, error) {
+	conn, err := r.db.AcquireEx(*timeoutContext)
 	if err != nil {
 		return false, err
 	}
 	defer conn.Close()
 
 	// split inserts in batches
-	workList := make(chan []*model.Symbol)
+	workList := make(chan []*db.Symbol)
 	go func() {
 		defer close(workList)
 		batchSize := 1000
-		var stack []*model.Symbol
+		var stack []*db.Symbol
 		for _, sym := range symbols {
 			stack = append(stack, sym)
 			if len(stack) == batchSize {
@@ -153,13 +203,13 @@ func (r *SymbolRepository) InsertBulk(tx *pgx.Tx, timeoutContext *context.Contex
 }
 
 // DeleteBulk sets the Deleted At values for bulk symbols to now
-func (r *SymbolRepository) DeleteBulk(tx *pgx.Tx, timeoutContext *context.Context, symbols []*model.Symbol) (bool, error) {
+func (r *SymbolRepository) DeleteBulk(tx *pgx.Tx, timeoutContext *context.Context, symbols []*db.Symbol) (bool, error) {
 	// split updates in batches
-	workList := make(chan []*model.Symbol)
+	workList := make(chan []*db.Symbol)
 	go func() {
 		defer close(workList)
 		batchSize := 1000
-		var stack []*model.Symbol
+		var stack []*db.Symbol
 		for _, sym := range symbols {
 			stack = append(stack, sym)
 			if len(stack) == batchSize {
@@ -200,13 +250,13 @@ func (r *SymbolRepository) DeleteBulk(tx *pgx.Tx, timeoutContext *context.Contex
 
 // UpdateBulk updates all columns of the symbol with the matching uuid
 // with the passed symbol values
-func (r *SymbolRepository) UpdateBulk(tx *pgx.Tx, timeoutContext *context.Context, symbols []*model.Symbol) (bool, error) {
+func (r *SymbolRepository) UpdateBulk(tx *pgx.Tx, timeoutContext *context.Context, symbols []*db.Symbol) (bool, error) {
 	// split updates in batches
-	workList := make(chan []*model.Symbol)
+	workList := make(chan []*db.Symbol)
 	go func() {
 		defer close(workList)
 		batchSize := 1000
-		var stack []*model.Symbol
+		var stack []*db.Symbol
 		for _, sym := range symbols {
 			stack = append(stack, sym)
 			if len(stack) == batchSize {

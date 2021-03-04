@@ -1,4 +1,4 @@
-package model
+package db
 
 import (
 	"github.com/golang/protobuf/ptypes"

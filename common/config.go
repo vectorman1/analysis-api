@@ -22,6 +22,10 @@ type Config struct {
 	// RabbitMQ connection URL
 	RabbitMqConn string `json:"rabbit_mq_conn"`
 
+	// Alpha Vantage API Key
+	AlphaVantageApiKey string `json:"alpha_vantage_api_key"`
+
+	// JWT secret for signing user tokens
 	JwtSigningSecret string `json:"jwt_signing_secret"`
 
 	// gRPC grpc-server start parameters section

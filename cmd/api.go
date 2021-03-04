@@ -90,12 +90,21 @@ func initializeServices(ctx context.Context, dbConnPool *pgx.ConnPool, rpcClient
 
 	symbolsRepository := db.NewSymbolRepository(dbConnPool)
 	currencyRepository := db.NewCurrencyRepository(dbConnPool)
+	symbolOverviewRepository := db.NewSymbolOverviewRepository(dbConnPool)
+	userRepository := db.NewUserRepository(dbConnPool)
+	historicalRepository := db.NewHistoricalRepository(dbConnPool)
 
-	symbolsService := service.NewSymbolsService(symbolsRepository, currencyRepository)
+	alphaVantageService := service.NewAlphaVantageService(config)
+
+	symbolsService := service.NewSymbolsService(symbolsRepository, symbolOverviewRepository, currencyRepository, alphaVantageService)
+	userService := service.NewUserService(userRepository, config)
+	historicalService := service.NewHistoricalService(historicalRepository)
 
 	symbolsServiceServer := server.NewSymbolsServiceServer(rpcClient, symbolsQueue, symbolsService)
+	userServiceServer := server.NewUserServiceServer(userService)
+	historicalServiceServer := server.NewHistoricalServiceServer(historicalService)
 
-	return grpc_server.NewGRPCServer(ctx, config.GRPCPort, symbolsServiceServer), nil
+	return grpc_server.NewGRPCServer(ctx, config.GRPCPort, symbolsServiceServer, userServiceServer, historicalServiceServer), nil
 }
 
 func main() {

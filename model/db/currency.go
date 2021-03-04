@@ -1,4 +1,4 @@
-package model
+package db
 
 type Currency struct {
 	ID       uint   `json:"id"`

@@ -5,8 +5,6 @@ import (
 
 	"github.com/vectorman1/analysis/analysis-api/generated/user_service"
 	"github.com/vectorman1/analysis/analysis-api/service"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type UserServiceServer struct {
@@ -14,9 +12,23 @@ type UserServiceServer struct {
 	user_service.UnimplementedUserServiceServer
 }
 
-func (s *UserServiceServer) Login(context.Context, *user_service.LoginRequest) (*user_service.LoginResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Login not implemented")
+func NewUserServiceServer(userService *service.UserService) *UserServiceServer {
+	return &UserServiceServer{userService: userService}
 }
-func (s *UserServiceServer) Register(context.Context, *user_service.RegisterRequest) (*user_service.RegisterResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Register not implemented")
+
+func (s *UserServiceServer) Login(ctx context.Context, req *user_service.LoginRequest) (*user_service.LoginResponse, error) {
+	result, err := s.userService.Login(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+func (s *UserServiceServer) Register(ctx context.Context, req *user_service.RegisterRequest) (*user_service.RegisterResponse, error) {
+	result, err := s.userService.Register(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }

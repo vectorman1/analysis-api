@@ -7,9 +7,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/vectorman1/analysis/analysis-api/generated/proto_models"
+	"github.com/vectorman1/analysis/analysis-api/generated/worker_symbol_service"
+
 	"github.com/vectorman1/analysis/analysis-api/generated/symbol_service"
-	"github.com/vectorman1/analysis/analysis-api/generated/trading212_service"
 	"github.com/vectorman1/analysis/analysis-api/service"
 
 	"github.com/vectorman1/analysis/analysis-api/common"
@@ -43,13 +43,18 @@ func (s *SymbolsServiceServer) ReadPaged(ctx context.Context, req *symbol_servic
 	if req.Filter.Order == "" {
 		return nil, status.Error(codes.InvalidArgument, "provide order argument")
 	}
+	timeoutContext, c := context.WithTimeout(ctx, 5*time.Second)
+	defer c()
 
-	res, err := s.symbolService.GetPaged(ctx, req)
+	res, totalItemsCount, err := s.symbolService.GetPaged(timeoutContext, req)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	resp := &symbol_service.ReadPagedSymbolResponse{Symbols: &proto_models.Symbols{Symbols: *res}}
+	resp := &symbol_service.ReadPagedSymbolResponse{
+		Items:      *res,
+		TotalItems: uint64(totalItemsCount),
+	}
 	return resp, nil
 }
 
@@ -66,7 +71,16 @@ func (s *SymbolsServiceServer) Update(ctx context.Context, req *symbol_service.U
 }
 
 func (s *SymbolsServiceServer) Delete(ctx context.Context, req *symbol_service.DeleteSymbolRequest) (*symbol_service.DeleteSymbolResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
+	return nil, status.Errorf(codes.Unimplemented, "method Update not implemented")
+}
+
+func (s *SymbolsServiceServer) Details(ctx context.Context, req *symbol_service.SymbolDetailsRequest) (*symbol_service.SymbolDetailsResponse, error) {
+	res, err := s.symbolService.Details(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func (s *SymbolsServiceServer) Recalculate(ctx context.Context, req *symbol_service.RecalculateSymbolRequest) (*symbol_service.RecalculateSymbolResponse, error) {
@@ -74,8 +88,7 @@ func (s *SymbolsServiceServer) Recalculate(ctx context.Context, req *symbol_serv
 	defer c1()
 
 	s.rabbitClient.Push([]byte("1234"))
-
-	client := trading212_service.NewTrading212ServiceClient(s.rpcClient.Connection)
+	client := worker_symbol_service.NewWorkerSymbolServiceClient(s.rpcClient.Connection)
 	stream, err := client.RecalculateSymbols(grpcClientContext)
 
 	if err != nil {
@@ -83,7 +96,7 @@ func (s *SymbolsServiceServer) Recalculate(ctx context.Context, req *symbol_serv
 	}
 
 	go func() {
-		symbols, err := s.symbolService.GetPaged(ctx, &symbol_service.ReadPagedSymbolRequest{
+		symbols, _, err := s.symbolService.GetPaged(ctx, &symbol_service.ReadPagedSymbolRequest{
 			Filter: &symbol_service.SymbolFilter{
 				PageSize:   20000,
 				PageNumber: 1,
@@ -106,7 +119,7 @@ func (s *SymbolsServiceServer) Recalculate(ctx context.Context, req *symbol_serv
 		}
 	}()
 
-	var result []*trading212_service.RecalculateSymbolsResponse
+	var result []*worker_symbol_service.RecalculateSymbolsResponse
 	for {
 		if res, err := stream.Recv(); err != nil {
 			if err == io.EOF {

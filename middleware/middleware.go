@@ -3,7 +3,7 @@ package middleware
 import (
 	"context"
 
-	"github.com/vectorman1/analysis/analysis-api/model"
+	"github.com/vectorman1/analysis/analysis-api/model/db"
 
 	"github.com/dgrijalva/jwt-go"
 
@@ -61,7 +61,7 @@ func authorizeToken(ctx context.Context) (context.Context, error) {
 		return nil, err
 	}
 
-	claims := &model.Token{}
+	claims := &db.Token{}
 	_, err = jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte("secret"), nil
 	})

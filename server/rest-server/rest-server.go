@@ -3,6 +3,10 @@ package rest_server
 import (
 	"context"
 
+	"github.com/vectorman1/analysis/analysis-api/generated/historical_service"
+
+	"github.com/vectorman1/analysis/analysis-api/generated/user_service"
+
 	cors_rest "github.com/vectorman1/analysis/analysis-api/middleware/cors-rest"
 
 	logger_rest "github.com/vectorman1/analysis/analysis-api/middleware/logger-rest"
@@ -33,6 +37,12 @@ func RunServer(ctx context.Context, grpcPort, httpPort string) error {
 	opts := []grpc.DialOption{grpc.WithInsecure()}
 
 	if err := symbol_service.RegisterSymbolServiceHandlerFromEndpoint(ctx, mux, "localhost:"+grpcPort, opts); err != nil {
+		logger_grpc.Log.Fatal("failed to start HTTP gateway", zap.String("reason", err.Error()))
+	}
+	if err := user_service.RegisterUserServiceHandlerFromEndpoint(ctx, mux, "localhost:"+grpcPort, opts); err != nil {
+		logger_grpc.Log.Fatal("failed to start HTTP gateway", zap.String("reason", err.Error()))
+	}
+	if err := historical_service.RegisterHistoricalServiceHandlerFromEndpoint(ctx, mux, "localhost:"+grpcPort, opts); err != nil {
 		logger_grpc.Log.Fatal("failed to start HTTP gateway", zap.String("reason", err.Error()))
 	}
 

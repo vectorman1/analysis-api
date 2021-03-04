@@ -4,13 +4,13 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/dystopia-systems/alaskalog"
 	"github.com/jackc/pgx"
-	"github.com/vectorman1/analysis/analysis-api/model"
+	"github.com/vectorman1/analysis/analysis-api/model/db"
 )
 
 type currencyRepository interface {
-	GetByCode(code string) (*model.Currency, error)
-	GetOrCreate(code string) (*model.Currency, error)
-	Create(curr *model.Currency) (uint, error)
+	GetByCode(code string) (*db.Currency, error)
+	GetOrCreate(code string) (*db.Currency, error)
+	Create(curr *db.Currency) (uint, error)
 }
 
 type CurrencyRepository struct {
@@ -24,7 +24,7 @@ func NewCurrencyRepository(pgDb *pgx.ConnPool) *CurrencyRepository {
 	}
 }
 
-func (r *CurrencyRepository) GetByCode(code string) (*model.Currency, error) {
+func (r *CurrencyRepository) GetByCode(code string) (*db.Currency, error) {
 	queryBuilder := squirrel.
 		Select("id, code, long_name").
 		From("analysis.currencies").
@@ -38,7 +38,7 @@ func (r *CurrencyRepository) GetByCode(code string) (*model.Currency, error) {
 
 	rows := r.db.QueryRow(query, args...)
 
-	var res model.Currency
+	var res db.Currency
 	err = rows.Scan(&res.ID, &res.Code, &res.LongName)
 	if err != nil {
 		return nil, err
@@ -47,10 +47,10 @@ func (r *CurrencyRepository) GetByCode(code string) (*model.Currency, error) {
 	return &res, nil
 }
 
-func (r *CurrencyRepository) GetOrCreate(code string) (*model.Currency, error) {
+func (r *CurrencyRepository) GetOrCreate(code string) (*db.Currency, error) {
 	curr, err := r.GetByCode(code)
 	if err != nil {
-		newCurr := &model.Currency{}
+		newCurr := &db.Currency{}
 		newCurr.Code = code
 		newCurr.LongName = "temp name"
 
@@ -67,7 +67,7 @@ func (r *CurrencyRepository) GetOrCreate(code string) (*model.Currency, error) {
 	}
 }
 
-func (r *CurrencyRepository) Create(curr *model.Currency) (uint, error) {
+func (r *CurrencyRepository) Create(curr *db.Currency) (uint, error) {
 	queryBuilder := squirrel.
 		Insert("analysis.currencies").
 		Columns("code, long_name").

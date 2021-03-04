@@ -6,50 +6,92 @@ import (
 	"sync"
 	"time"
 
+	db2 "github.com/vectorman1/analysis/analysis-api/model/db"
+
+	"github.com/vectorman1/analysis/analysis-api/generated/worker_symbol_service"
+
 	"github.com/jackc/pgx"
 
 	"github.com/jackc/pgx/pgtype"
 	"github.com/vectorman1/analysis/analysis-api/db"
 	"github.com/vectorman1/analysis/analysis-api/generated/proto_models"
 	"github.com/vectorman1/analysis/analysis-api/generated/symbol_service"
-	"github.com/vectorman1/analysis/analysis-api/generated/trading212_service"
-	"github.com/vectorman1/analysis/analysis-api/model"
 )
 
 type symbolsService interface {
 	// repo methods
-	GetPaged(ctx context.Context, req *symbol_service.ReadPagedSymbolRequest) (*[]*proto_models.Symbol, error)
-	GetByISINAndName(isin, name string) (*proto_models.Symbol, error)
+	GetPaged(ctx context.Context, req *symbol_service.ReadPagedSymbolRequest) (*[]*proto_models.Symbol, uint, error)
+	Details(ctx context.Context, req *symbol_service.SymbolDetailsRequest) (*symbol_service.SymbolDetailsResponse, error)
 	InsertBulk(timeoutContext context.Context, symbols []*proto_models.Symbol) (bool, error)
 	// service methods
 	ProcessRecalculationResponse(
-		input *chan *trading212_service.RecalculateSymbolsResponse,
-		responseChan *chan *symbol_service.RecalculateSymbolResponse,
-		errChan *chan error)
-	symbolDataToEntity(in *[]*proto_models.Symbol) ([]*model.Symbol, error)
+		input []*worker_symbol_service.RecalculateSymbolsResponse,
+		ctx *context.Context) (*symbol_service.RecalculateSymbolResponse, error)
+	symbolDataToEntity(in *[]*proto_models.Symbol) ([]*db2.Symbol, error)
 }
 
 type SymbolsService struct {
 	symbolsService
-	currencyRepository *db.CurrencyRepository
-	symbolsRepository  *db.SymbolRepository
+	currencyRepository       *db.CurrencyRepository
+	symbolsRepository        *db.SymbolRepository
+	symbolOverviewRepository *db.SymbolOverviewRepository
+	alphaVantageService      *AlphaVantageService
 }
 
-func NewSymbolsService(symbolsRepository *db.SymbolRepository, currencyRepository *db.CurrencyRepository) *SymbolsService {
-	return &SymbolsService{symbolsRepository: symbolsRepository, currencyRepository: currencyRepository}
+func NewSymbolsService(
+	symbolsRepository *db.SymbolRepository,
+	symbolOverviewRepository *db.SymbolOverviewRepository,
+	currencyRepository *db.CurrencyRepository,
+	alphaVantageService *AlphaVantageService) *SymbolsService {
+	return &SymbolsService{
+		symbolsRepository:        symbolsRepository,
+		symbolOverviewRepository: symbolOverviewRepository,
+		currencyRepository:       currencyRepository,
+		alphaVantageService:      alphaVantageService,
+	}
 }
 
-func (s *SymbolsService) GetPaged(ctx context.Context, req *symbol_service.ReadPagedSymbolRequest) (*[]*proto_models.Symbol, error) {
+func (s *SymbolsService) GetPaged(ctx context.Context, req *symbol_service.ReadPagedSymbolRequest) (*[]*proto_models.Symbol, uint, error) {
 	var res []*proto_models.Symbol
-	syms, err := s.symbolsRepository.GetPaged(ctx, req)
+	syms, totalItemsCount, err := s.symbolsRepository.GetPaged(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	for _, sym := range *syms {
 		res = append(res, sym.ToProtoObject())
 	}
 
-	return &res, nil
+	return &res, totalItemsCount, nil
+}
+
+func (s *SymbolsService) Details(ctx context.Context, req *symbol_service.SymbolDetailsRequest) (*symbol_service.SymbolDetailsResponse, error) {
+	symbol, err := s.symbolsRepository.GetByUuid(ctx, req.Uuid)
+	if err != nil {
+		return nil, err
+	}
+
+	overview, err := s.symbolOverviewRepository.GetBySymbolUuid(ctx, req.Uuid)
+	if err != nil {
+		extOverview, err := s.alphaVantageService.GetOrUpdateSymbolOverview(symbol.Identifier)
+		if err != nil {
+			return nil, err
+		}
+
+		_, err = s.symbolOverviewRepository.Insert(ctx, extOverview.ToEntity(req.Uuid))
+		if err != nil {
+			return nil, err
+		}
+
+		overview, err = s.symbolOverviewRepository.GetBySymbolUuid(ctx, req.Uuid)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &symbol_service.SymbolDetailsResponse{
+		Symbol:  symbol.ToProtoObject(),
+		Details: overview.ToProtoObject(),
+	}, nil
 }
 
 func (s *SymbolsService) InsertBulk(timeoutContext context.Context, symbols []*proto_models.Symbol) (bool, error) {
@@ -84,7 +126,7 @@ func (s *SymbolsService) InsertBulk(timeoutContext context.Context, symbols []*p
 }
 
 func (s *SymbolsService) ProcessRecalculationResponse(
-	input []*trading212_service.RecalculateSymbolsResponse,
+	input []*worker_symbol_service.RecalculateSymbolsResponse,
 	ctx *context.Context) (*symbol_service.RecalculateSymbolResponse, error) {
 
 	var createSymbols []*proto_models.Symbol
@@ -94,13 +136,13 @@ func (s *SymbolsService) ProcessRecalculationResponse(
 	itemsIgnored := int64(0)
 	for _, res := range input {
 		switch res.Type {
-		case trading212_service.RecalculateSymbolsResponse_CREATE:
+		case worker_symbol_service.RecalculateSymbolsResponse_CREATE:
 			createSymbols = append(createSymbols, res.Symbol)
-		case trading212_service.RecalculateSymbolsResponse_UPDATE:
+		case worker_symbol_service.RecalculateSymbolsResponse_UPDATE:
 			updateSymbols = append(updateSymbols, res.Symbol)
-		case trading212_service.RecalculateSymbolsResponse_DELETE:
+		case worker_symbol_service.RecalculateSymbolsResponse_DELETE:
 			deleteSymbols = append(deleteSymbols, res.Symbol)
-		case trading212_service.RecalculateSymbolsResponse_IGNORE:
+		case worker_symbol_service.RecalculateSymbolsResponse_IGNORE:
 			itemsIgnored++
 		}
 	}
@@ -119,7 +161,7 @@ func (s *SymbolsService) ProcessRecalculationResponse(
 		tx.RollbackEx(tctx)
 		return nil, err
 	}
-	temp := make(map[string][]*model.Symbol)
+	temp := make(map[string][]*db2.Symbol)
 	for _, sym := range createEntities {
 		var u string
 		_ = sym.Uuid.AssignTo(&u)
@@ -169,13 +211,13 @@ func (s *SymbolsService) ProcessRecalculationResponse(
 	}, nil
 }
 
-func (s *SymbolsService) symbolDataToEntity(in *[]*proto_models.Symbol) ([]*model.Symbol, error) {
-	var result []*model.Symbol
+func (s *SymbolsService) symbolDataToEntity(in *[]*proto_models.Symbol) ([]*db2.Symbol, error) {
+	var result []*db2.Symbol
 	var wg sync.WaitGroup
 
 	wg.Add(len(*in))
 	for _, sym := range *in {
-		e := model.Symbol{}
+		e := db2.Symbol{}
 
 		// get or create the currency of the symbol
 		curr, err := s.currencyRepository.GetOrCreate(sym.Currency.Code)
