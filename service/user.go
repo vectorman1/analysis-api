@@ -5,7 +5,7 @@ import (
 
 	"github.com/vectorman1/analysis/analysis-api/model"
 
-	db2 "github.com/vectorman1/analysis/analysis-api/model/db"
+	dbmodel "github.com/vectorman1/analysis/analysis-api/model/db"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -70,10 +70,11 @@ func (s *UserService) Login(request *user_service.LoginRequest) (*user_service.L
 // Register attempts to create a User with the corresponding
 // username and hashing the password.
 func (s *UserService) Register(request *user_service.RegisterRequest) (*user_service.RegisterResponse, error) {
-	user := &db2.User{
-		Uuid:     pgtype.UUID{Status: pgtype.Present},
-		Username: request.Username,
-		Password: request.Password,
+	user := &dbmodel.User{
+		Uuid:        pgtype.UUID{Status: pgtype.Present},
+		PrivateRole: dbmodel.Default,
+		Username:    request.Username,
+		Password:    request.Password,
 	}
 	u, _ := uuid.NewV4()
 	_ = user.Uuid.Set(u)

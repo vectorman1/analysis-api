@@ -1,17 +1,6 @@
 version: "3.3"
 
 services:
-  broker:
-    image: library/rabbitmq:3-management
-    container_name: analysis-broker
-    hostname: analysis-broker
-    environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
-    ports:
-    - 7073:5672
-    - 7072:15672
-
   db:
     image: library/postgres:13.2
     restart: always
@@ -38,7 +27,6 @@ services:
   api:
     depends_on:
       - db
-      - broker
     restart: always
     container_name: analysis-api
     hostname: analysis-api

@@ -169,4 +169,4 @@ CREATE TABLE IF NOT EXISTS "user".users
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     deleted_at TIMESTAMPTZ NULL DEFAULT NULL
-    );
+);
