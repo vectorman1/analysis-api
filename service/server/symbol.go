@@ -27,11 +27,9 @@ type SymbolsServiceServer struct {
 
 func NewSymbolsServiceServer(
 	rpcClient *common.Rpc,
-	rabbitClient *common.RabbitClient,
 	symbolsService *service.SymbolsService) *SymbolsServiceServer {
 	return &SymbolsServiceServer{
 		rpcClient:     rpcClient,
-		rabbitClient:  rabbitClient,
 		symbolService: symbolsService,
 	}
 }
@@ -101,7 +99,6 @@ func (s *SymbolsServiceServer) Recalculate(ctx context.Context, req *symbol_serv
 	grpcClientContext, c1 := context.WithTimeout(ctx, 60*time.Second)
 	defer c1()
 
-	s.rabbitClient.Push([]byte("1234"))
 	client := worker_symbol_service.NewWorkerSymbolServiceClient(s.rpcClient.Connection)
 	stream, err := client.RecalculateSymbols(grpcClientContext)
 

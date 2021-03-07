@@ -12,10 +12,7 @@ func GetConnPool(config *common.Config) (*pgx.ConnPool, error) {
 		User:     config.DatastoreDBUser,
 		Password: config.DatastoreDBPassword,
 		Database: config.DatastoreDBSchema,
-	}
-
-	if config.Environment == common.Development {
-		cfg.Host = "localhost"
+		Host:     config.DatastoreDBHost,
 	}
 
 	poolConfig := pgx.ConnPoolConfig{

@@ -60,15 +60,9 @@ func (r *Rpc) LoadTLSCredentials() error {
 }
 
 func (r *Rpc) GetConnection() error {
-	t := ""
+	workerAddr := fmt.Sprintf("%s:%d", r.config.WorkerHost, r.config.WorkerPort)
 
-	if r.config.Environment == Development {
-		t = "localhost:6969"
-	} else {
-		t = "host.docker.internal:6969"
-	}
-
-	conn, err := grpc.Dial(t, grpc.WithInsecure())
+	conn, err := grpc.Dial(workerAddr, grpc.WithInsecure())
 	if err != nil {
 		return err
 	}

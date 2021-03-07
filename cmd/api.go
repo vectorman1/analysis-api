@@ -9,8 +9,6 @@ import (
 
 	"github.com/jackc/pgx"
 
-	"github.com/rs/zerolog"
-
 	"github.com/vectorman1/analysis/analysis-api/service"
 
 	"github.com/vectorman1/analysis/analysis-api/service/server"
@@ -84,10 +82,10 @@ func RunServer() error {
 }
 
 func initializeServices(ctx context.Context, dbConnPool *pgx.ConnPool, rpcClient *common.Rpc, config *common.Config, sigs chan os.Signal) (*grpc_server.GRPCServer, error) {
-	w := zerolog.NewConsoleWriter()
-
-	symbolsQueue := common.NewRabbitClient("symbols.stream", "symbols", config.RabbitMqConn, sigs, zerolog.New(w))
-	defer symbolsQueue.Close()
+	//w := zerolog.NewConsoleWriter()
+	//
+	//symbolsQueue := common.NewRabbitClient("symbols.stream", "symbols", config.RabbitMqConn, sigs, zerolog.New(w))
+	//defer symbolsQueue.Close()
 
 	symbolRepository := db.NewSymbolRepository(dbConnPool)
 	currencyRepository := db.NewCurrencyRepository(dbConnPool)
@@ -101,7 +99,7 @@ func initializeServices(ctx context.Context, dbConnPool *pgx.ConnPool, rpcClient
 	userService := service.NewUserService(userRepository, config)
 	historicalService := service.NewHistoricalService(historicalRepository, symbolRepository)
 
-	symbolsServiceServer := server.NewSymbolsServiceServer(rpcClient, symbolsQueue, symbolsService)
+	symbolsServiceServer := server.NewSymbolsServiceServer(rpcClient, symbolsService)
 	userServiceServer := server.NewUserServiceServer(userService)
 	historicalServiceServer := server.NewHistoricalServiceServer(historicalService)
 
