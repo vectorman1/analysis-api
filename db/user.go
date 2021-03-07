@@ -26,21 +26,15 @@ func NewUserRepository(db *pgx.ConnPool) *UserRepository {
 func (r *UserRepository) Create(user *db.User) error {
 	query, args, err := squirrel.
 		Insert("\"user\".users").
-		Columns("uuid, username, password, created_at, updated_at").
-		Values(&user.Uuid, &user.Username, &user.Password, &user.CreatedAt, &user.UpdatedAt).
+		Columns("uuid, private_role, username, password, created_at, updated_at").
+		Values(&user.Uuid, &user.PrivateRole, &user.Username, &user.Password, &user.CreatedAt, &user.UpdatedAt).
 		PlaceholderFormat(squirrel.Dollar).
 		ToSql()
 	if err != nil {
 		return err
 	}
 
-	conn, err := r.db.Acquire()
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-
-	_, err = conn.Exec(query, args...)
+	_, err = r.db.Exec(query, args...)
 	if err != nil {
 		return err
 	}
@@ -49,12 +43,6 @@ func (r *UserRepository) Create(user *db.User) error {
 }
 
 func (r *UserRepository) Get(username string, password string) (*db.User, error) {
-	conn, err := r.db.Acquire()
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-
 	// Find user with matching username
 	query, args, err := squirrel.
 		Select("*").
@@ -65,8 +53,8 @@ func (r *UserRepository) Get(username string, password string) (*db.User, error)
 		ToSql()
 
 	var res db.User
-	row := conn.QueryRow(query, args...)
-	err = row.Scan(&res.ID, &res.Uuid, &res.Username, &res.Password, &res.CreatedAt, &res.UpdatedAt, &res.DeletedAt)
+	row := r.db.QueryRow(query, args...)
+	err = row.Scan(&res.ID, &res.Uuid, &res.PrivateRole, &res.Username, &res.Password, &res.CreatedAt, &res.UpdatedAt, &res.DeletedAt)
 	if err != nil {
 		return nil, err
 	}

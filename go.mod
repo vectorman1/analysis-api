@@ -16,6 +16,8 @@ require (
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v3.6.2+incompatible
 	github.com/lib/pq v1.9.0 // indirect
+	github.com/markcheno/go-quote v0.0.0-20201111135441-45c9eb9ba017
+	github.com/piquette/finance-go v1.0.0
 	github.com/rs/zerolog v1.20.0
 	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/streadway/amqp v1.0.0

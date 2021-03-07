@@ -163,6 +163,7 @@ CREATE TABLE IF NOT EXISTS "user".users
 (
     id SERIAL PRIMARY KEY,
     uuid uuid NOT NULL UNIQUE,
+    private_role BIGINT NOT NULL,
     username TEXT NOT NULL UNIQUE,
     password TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),

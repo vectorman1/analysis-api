@@ -11,8 +11,6 @@ import (
 
 	logger_rest "github.com/vectorman1/analysis/analysis-api/middleware/logger-rest"
 
-	"github.com/vectorman1/analysis/analysis-api/middleware/http_rest"
-
 	"log"
 	"net/http"
 	"os"
@@ -32,8 +30,7 @@ func RunServer(ctx context.Context, grpcPort, httpPort string) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	errorHandler := runtime.WithErrorHandler(http_rest.HandleMuxError)
-	mux := runtime.NewServeMux(errorHandler)
+	mux := runtime.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithInsecure()}
 
 	if err := symbol_service.RegisterSymbolServiceHandlerFromEndpoint(ctx, mux, "localhost:"+grpcPort, opts); err != nil {

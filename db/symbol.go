@@ -49,18 +49,22 @@ func (r *SymbolRepository) GetPaged(ctx context.Context, req *symbol_service.Rea
 		Join("analysis.currencies AS c ON c.id = s.currency_id").
 		Where("deleted_at is NULL").
 		PlaceholderFormat(squirrel.Dollar)
+
+	if req.Filter.Text != "" {
+		req.Filter.Text = fmt.Sprintf("%%%s%%", req.Filter.Text)
+		nameLikeText := squirrel.ILike{"name": req.Filter.Text}
+		identifierLikeText := squirrel.ILike{"identifier": req.Filter.Text}
+		isinLikeText := squirrel.ILike{"isin": req.Filter.Text}
+
+		queryBuilder = queryBuilder.Where(squirrel.Or{nameLikeText, identifierLikeText, isinLikeText})
+	}
+
 	q, args, err := queryBuilder.ToSql()
 	if err != nil {
 		return nil, 0, err
 	}
 
-	conn, err := r.db.AcquireEx(ctx)
-	if err != nil {
-		return nil, 0, err
-	}
-	defer conn.Close()
-
-	rows, err := conn.QueryEx(ctx, q, nil, args...)
+	rows, err := r.db.QueryEx(ctx, q, nil, args...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -97,12 +101,6 @@ func (r *SymbolRepository) GetPaged(ctx context.Context, req *symbol_service.Rea
 }
 
 func (r *SymbolRepository) GetByUuid(ctx context.Context, symbolUuid string) (*db.Symbol, error) {
-	conn, err := r.db.AcquireEx(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-
 	u, err := uuid.FromString(symbolUuid)
 	if err != nil {
 		return nil, err
@@ -120,7 +118,7 @@ func (r *SymbolRepository) GetByUuid(ctx context.Context, symbolUuid string) (*d
 	}
 
 	sym := db.Symbol{Currency: db.Currency{}}
-	row := conn.QueryRowEx(ctx, query, &pgx.QueryExOptions{})
+	row := r.db.QueryRowEx(ctx, query, &pgx.QueryExOptions{})
 	if err = row.Scan(
 		&sym.ID,
 		&sym.Uuid,
@@ -145,12 +143,6 @@ func (r *SymbolRepository) GetByUuid(ctx context.Context, symbolUuid string) (*d
 
 // InsertBulk inserts the slice in a single transaction in batches and returns success and error
 func (r *SymbolRepository) InsertBulk(tx *pgx.Tx, timeoutContext *context.Context, symbols []*db.Symbol) (bool, error) {
-	conn, err := r.db.AcquireEx(*timeoutContext)
-	if err != nil {
-		return false, err
-	}
-	defer conn.Close()
-
 	// split inserts in batches
 	workList := make(chan []*db.Symbol)
 	go func() {
@@ -192,7 +184,7 @@ func (r *SymbolRepository) InsertBulk(tx *pgx.Tx, timeoutContext *context.Contex
 
 		query, args, _ := q.ToSql()
 		if len(args) > 0 {
-			_, err = tx.ExecEx(*timeoutContext, query, &pgx.QueryExOptions{}, args...)
+			_, err := tx.ExecEx(*timeoutContext, query, &pgx.QueryExOptions{}, args...)
 			if err != nil {
 				return false, err
 			}

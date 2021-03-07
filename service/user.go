@@ -3,6 +3,8 @@ package service
 import (
 	"time"
 
+	"github.com/vectorman1/analysis/analysis-api/model"
+
 	db2 "github.com/vectorman1/analysis/analysis-api/model/db"
 
 	"golang.org/x/crypto/bcrypt"
@@ -46,7 +48,7 @@ func (s *UserService) Login(request *user_service.LoginRequest) (*user_service.L
 	user.Uuid.AssignTo(&u)
 
 	expTime := time.Now().Add(24 * 60 * time.Minute)
-	claims := &db2.Claims{
+	claims := &model.Claims{
 		Uuid: u,
 		StandardClaims: jwt.StandardClaims{
 			Audience:  "analysis-web",

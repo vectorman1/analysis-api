@@ -5,8 +5,6 @@ import (
 
 	"github.com/vectorman1/analysis/analysis-api/generated/historical_service"
 	"github.com/vectorman1/analysis/analysis-api/service"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type HistoricalServiceServer struct {
@@ -21,5 +19,9 @@ func NewHistoricalServiceServer(historicalService *service.HistoricalService) *H
 }
 
 func (s *HistoricalServiceServer) GetBySymbolUuid(ctx context.Context, req *historical_service.GetBySymbolUuidRequest) (*historical_service.GetBySymbolUuidResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, req.SymbolUuid)
+	h, err := s.historicalService.GetBySymbolUuid(&ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return &historical_service.GetBySymbolUuidResponse{Items: *h}, nil
 }

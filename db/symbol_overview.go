@@ -27,12 +27,6 @@ func NewSymbolOverviewRepository(db *pgx.ConnPool) *SymbolOverviewRepository {
 }
 
 func (r *SymbolOverviewRepository) Insert(ctx context.Context, overview *dbmodel.SymbolOverview) (bool, error) {
-	conn, err := r.db.AcquireEx(ctx)
-	if err != nil {
-		return false, err
-	}
-	defer conn.Close()
-
 	queryBuilder := squirrel.
 		Insert("analysis.symbol_overviews").
 		Columns("symbol_uuid, description, country, sector, industry, address, full_time_employees, fiscal_year_end, latest_quarter, market_capitalization, ebitda, pe_ratio, peg_ratio, book_value, dividend_per_share, dividend_yield, eps, revenue_per_share_ttm, profit_margin, operating_margin_ttm, return_on_assets_ttm, return_on_equity_ttm, revenue_ttm, gross_profit_ttm, diluted_eps_ttm, quarterly_earnings_growth_yoy, quarterly_revenue_growth_yoy, analyst_target_price, trailing_pe, forward_pe, price_to_sales_ratio_ttm, price_to_book_ratio, ev_to_revenue, ev_to_ebitda, beta, week_high_52, week_low_52, shares_outstanding, shares_float, shares_short, shares_short_prior_month, short_ratio, short_percent_outstanding, short_percent_float, percent_insiders, percent_institutions, forward_annual_dividend_date, forward_annual_dividend_yield, payout_ratio, dividend_date, ex_dividend_date, last_split_factor, last_split_date, updated_at").
@@ -98,7 +92,7 @@ func (r *SymbolOverviewRepository) Insert(ctx context.Context, overview *dbmodel
 		return false, err
 	}
 
-	_, err = conn.ExecEx(ctx, query, &pgx.QueryExOptions{}, args...)
+	_, err = r.db.ExecEx(ctx, query, &pgx.QueryExOptions{}, args...)
 	if err != nil {
 		return false, err
 	}
@@ -107,12 +101,6 @@ func (r *SymbolOverviewRepository) Insert(ctx context.Context, overview *dbmodel
 }
 
 func (r *SymbolOverviewRepository) GetBySymbolUuid(ctx context.Context, uuid string) (*dbmodel.SymbolOverview, error) {
-	conn, err := r.db.AcquireEx(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-
 	queryBuilder := squirrel.
 		Select("*").
 		From("analysis.symbol_overviews").
@@ -124,7 +112,7 @@ func (r *SymbolOverviewRepository) GetBySymbolUuid(ctx context.Context, uuid str
 	}
 
 	var result dbmodel.SymbolOverview
-	row := conn.QueryRowEx(ctx, query, &pgx.QueryExOptions{})
+	row := r.db.QueryRowEx(ctx, query, &pgx.QueryExOptions{})
 	if err = row.Scan(
 		&result.SymbolUuid,
 		&result.Description,

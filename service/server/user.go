@@ -3,6 +3,8 @@ package server
 import (
 	"context"
 
+	"google.golang.org/grpc/status"
+
 	"github.com/vectorman1/analysis/analysis-api/generated/user_service"
 	"github.com/vectorman1/analysis/analysis-api/service"
 )
@@ -19,6 +21,10 @@ func NewUserServiceServer(userService *service.UserService) *UserServiceServer {
 func (s *UserServiceServer) Login(ctx context.Context, req *user_service.LoginRequest) (*user_service.LoginResponse, error) {
 	result, err := s.userService.Login(req)
 	if err != nil {
+		st, ok := status.FromError(err)
+		if ok {
+			return nil, st.Err()
+		}
 		return nil, err
 	}
 

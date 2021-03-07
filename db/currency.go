@@ -79,14 +79,8 @@ func (r *CurrencyRepository) Create(curr *db.Currency) (uint, error) {
 		return 0, err
 	}
 
-	conn, err := r.db.Acquire()
-	if err != nil {
-		return 0, err
-	}
-	defer conn.Close()
-
 	id := uint(0)
-	err = conn.QueryRow(query+" RETURNING id;", args...).Scan(&id)
+	err = r.db.QueryRow(query+" RETURNING id;", args...).Scan(&id)
 	if err != nil {
 		return 0, err
 	}

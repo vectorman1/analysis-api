@@ -75,8 +75,17 @@ func (s *SymbolsServiceServer) Delete(ctx context.Context, req *symbol_service.D
 }
 
 func (s *SymbolsServiceServer) Details(ctx context.Context, req *symbol_service.SymbolDetailsRequest) (*symbol_service.SymbolDetailsResponse, error) {
+	userInfo := ctx.Value("user_info")
+	if userInfo == nil {
+		return nil, status.Error(codes.Unauthenticated, "provide user token")
+	}
+
 	res, err := s.symbolService.Details(ctx, req)
 	if err != nil {
+		st, ok := status.FromError(err)
+		if ok {
+			return nil, st.Err()
+		}
 		return nil, err
 	}
 
@@ -84,6 +93,11 @@ func (s *SymbolsServiceServer) Details(ctx context.Context, req *symbol_service.
 }
 
 func (s *SymbolsServiceServer) Recalculate(ctx context.Context, req *symbol_service.RecalculateSymbolRequest) (*symbol_service.RecalculateSymbolResponse, error) {
+	userInfo := ctx.Value("user_info")
+	if userInfo == nil {
+		return nil, status.Error(codes.Unauthenticated, "provide user token")
+	}
+
 	grpcClientContext, c1 := context.WithTimeout(ctx, 60*time.Second)
 	defer c1()
 

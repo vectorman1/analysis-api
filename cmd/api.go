@@ -43,6 +43,7 @@ func RunServer() error {
 		return fmt.Errorf("failed to initialize logger-grpc: %v", err)
 	}
 
+	// set up db connection pool
 	dbConnPool, err := db.GetConnPool(config)
 	if err != nil {
 		return fmt.Errorf("failed to create conn pool: %v", err)
@@ -88,7 +89,7 @@ func initializeServices(ctx context.Context, dbConnPool *pgx.ConnPool, rpcClient
 	symbolsQueue := common.NewRabbitClient("symbols.stream", "symbols", config.RabbitMqConn, sigs, zerolog.New(w))
 	defer symbolsQueue.Close()
 
-	symbolsRepository := db.NewSymbolRepository(dbConnPool)
+	symbolRepository := db.NewSymbolRepository(dbConnPool)
 	currencyRepository := db.NewCurrencyRepository(dbConnPool)
 	symbolOverviewRepository := db.NewSymbolOverviewRepository(dbConnPool)
 	userRepository := db.NewUserRepository(dbConnPool)
@@ -96,9 +97,9 @@ func initializeServices(ctx context.Context, dbConnPool *pgx.ConnPool, rpcClient
 
 	alphaVantageService := service.NewAlphaVantageService(config)
 
-	symbolsService := service.NewSymbolsService(symbolsRepository, symbolOverviewRepository, currencyRepository, alphaVantageService)
+	symbolsService := service.NewSymbolsService(symbolRepository, symbolOverviewRepository, currencyRepository, alphaVantageService)
 	userService := service.NewUserService(userRepository, config)
-	historicalService := service.NewHistoricalService(historicalRepository)
+	historicalService := service.NewHistoricalService(historicalRepository, symbolRepository)
 
 	symbolsServiceServer := server.NewSymbolsServiceServer(rpcClient, symbolsQueue, symbolsService)
 	userServiceServer := server.NewUserServiceServer(userService)

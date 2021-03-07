@@ -34,17 +34,12 @@ func (r *HistoricalRepository) GetBySymbolUuid(ctx *context.Context, symbolUuid 
 		Where(squirrel.GtOrEq{"for_date": startDate}).
 		PlaceholderFormat(squirrel.Dollar)
 
-	conn, err := r.db.Acquire()
-	if err != nil {
-		return nil, err
-	}
-
 	query, args, err := queryBuilder.ToSql()
 	if err != nil {
 		return nil, err
 	}
 
-	rows, err := conn.QueryEx(*ctx, query, &pgx.QueryExOptions{}, args)
+	rows, err := r.db.QueryEx(*ctx, query, &pgx.QueryExOptions{}, args)
 	if err != nil {
 		return nil, err
 	}

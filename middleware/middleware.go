@@ -40,7 +40,7 @@ func LoadMiddleware(logger *zap.Logger, opts []grpc.ServerOption) []grpc.ServerO
 	// Add authentication
 	// Add unary interceptor
 	opts = append(opts, grpc_middleware.WithUnaryServerChain(
-		//grpc_auth.UnaryServerInterceptor(authorizeToken),
+		grpc_auth.UnaryServerInterceptor(authorizeToken),
 		grpc_ctxtags.UnaryServerInterceptor(grpc_ctxtags.WithFieldExtractor(grpc_ctxtags.CodeGenRequestFieldExtractor)),
 		grpc_zap.UnaryServerInterceptor(logger, o...),
 	))
@@ -58,15 +58,15 @@ func LoadMiddleware(logger *zap.Logger, opts []grpc.ServerOption) []grpc.ServerO
 func authorizeToken(ctx context.Context) (context.Context, error) {
 	token, err := grpc_auth.AuthFromMD(ctx, "Bearer")
 	if err != nil {
-		return nil, err
+		return ctx, nil
 	}
 
 	claims := &db.Token{}
 	_, err = jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte("secret"), nil
+		return []byte("kurzaushev"), nil
 	})
 	if err != nil {
-		return nil, err
+		return ctx, nil
 	}
 
 	newCtx := context.WithValue(ctx, "user_info", claims)

@@ -39,6 +39,7 @@ message SymbolFilter {
   uint64 pageNumber = 2;
   string order = 3;
   bool ascending = 4;
+  string text = 5;
 }
 
 message ReadPagedSymbolRequest {
