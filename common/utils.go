@@ -1,6 +1,10 @@
 package common
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/vectorman1/analysis/analysis-api/generated/proto_models"
+)
 
 func FormatOrderQuery(attr string, asc bool) string {
 	var d string
@@ -11,4 +15,13 @@ func FormatOrderQuery(attr string, asc bool) string {
 	}
 
 	return fmt.Sprintf("%s %s", attr, d)
+}
+
+func ContainsSymbol(uuid string, arr []*proto_models.Symbol) (bool, *proto_models.Symbol) {
+	for _, v := range arr {
+		if v.Uuid == uuid {
+			return true, v
+		}
+	}
+	return false, nil
 }

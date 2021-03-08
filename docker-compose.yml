@@ -3,12 +3,14 @@ version: "3.3"
 services:
   db:
     image: library/postgres:13.2
+    networks:
+      - backend
     restart: always
     hostname: analysis-db
-    container_name: analysis_db
+    container_name: analysis-db
     volumes:
-    - ./sql/create.sql:/docker-entrypoint-initdb.d/01_create.sql
-    - analysis-storage:/var/lib/postgresql/data
+      - ./sql/create.sql:/docker-entrypoint-initdb.d/01_create.sql
+      - analysis-storage:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: harb
       POSTGRES_PASSWORD: HueHue123
@@ -20,23 +22,36 @@ services:
     image: adminer
     restart: always
     ports:
-     - 7071:8080
+      - 7071:8080
     hostname: analysis-adminer
     container_name: analysis-adminer
 
   api:
+    networks:
+      - backend
+      - frontend
+    volumes:
+    - /docker-mnt/analysis-api/certs:/certs
     depends_on:
       - db
     restart: always
     container_name: analysis-api
     hostname: analysis-api
+    deploy:
+      replicas: 5
     build:
       context: .
     ports:
-      - 7070:7070
+      - target: 7070
+        mode: ingress
     environment:
       SARUMAN_API_KEY: ${SARUMAN_API_KEY}
       SARUMAN_URL: ${SARUMAN_URL}
 
+
 volumes:
  analysis-storage:
+
+networks:
+  backend:
+  frontend:

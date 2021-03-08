@@ -36,6 +36,7 @@ func (r *Rpc) Initialize() (*Rpc, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("connected to worker rpc server")
 	return r, nil
 }
 

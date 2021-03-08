@@ -53,13 +53,6 @@ func RunServer() error {
 	}
 	defer conn.Close()
 
-	// connect to worker rpc server
-	rpcClient := common.NewRpcClient(config)
-	_, err = rpcClient.Initialize()
-	if err != nil {
-		return fmt.Errorf("failed to connect to worker rpc server: %v", err)
-	}
-
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
@@ -68,7 +61,7 @@ func RunServer() error {
 		fmt.Println(sig)
 	}()
 
-	s, err := initializeServices(ctx, dbConnPool, rpcClient, config, sigs)
+	s, err := initializeServices(ctx, dbConnPool, config)
 	if err != nil {
 		return err
 	}
@@ -81,7 +74,7 @@ func RunServer() error {
 	return s.Run()
 }
 
-func initializeServices(ctx context.Context, dbConnPool *pgx.ConnPool, rpcClient *common.Rpc, config *common.Config, sigs chan os.Signal) (*grpc_server.GRPCServer, error) {
+func initializeServices(ctx context.Context, dbConnPool *pgx.ConnPool, config *common.Config) (*grpc_server.GRPCServer, error) {
 	//w := zerolog.NewConsoleWriter()
 	//
 	//symbolsQueue := common.NewRabbitClient("symbols.stream", "symbols", config.RabbitMqConn, sigs, zerolog.New(w))
@@ -93,13 +86,14 @@ func initializeServices(ctx context.Context, dbConnPool *pgx.ConnPool, rpcClient
 	userRepository := db.NewUserRepository(dbConnPool)
 	historicalRepository := db.NewHistoricalRepository(dbConnPool)
 
+	externalSymbolService := service.NewExternalSymbolService()
 	alphaVantageService := service.NewAlphaVantageService(config)
 
-	symbolsService := service.NewSymbolsService(symbolRepository, symbolOverviewRepository, currencyRepository, alphaVantageService)
+	symbolsService := service.NewSymbolsService(symbolRepository, symbolOverviewRepository, currencyRepository, alphaVantageService, externalSymbolService)
 	userService := service.NewUserService(userRepository, config)
 	historicalService := service.NewHistoricalService(historicalRepository, symbolRepository)
 
-	symbolsServiceServer := server.NewSymbolsServiceServer(rpcClient, symbolsService)
+	symbolsServiceServer := server.NewSymbolsServiceServer(symbolsService)
 	userServiceServer := server.NewUserServiceServer(userService)
 	historicalServiceServer := server.NewHistoricalServiceServer(historicalService)
 
