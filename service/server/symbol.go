@@ -2,12 +2,7 @@ package server
 
 import (
 	"context"
-	"fmt"
-	"io"
-	"log"
 	"time"
-
-	"github.com/vectorman1/analysis/analysis-api/generated/worker_symbol_service"
 
 	"github.com/vectorman1/analysis/analysis-api/generated/symbol_service"
 	"github.com/vectorman1/analysis/analysis-api/service"
@@ -19,17 +14,14 @@ import (
 )
 
 type SymbolsServiceServer struct {
-	rpcClient     *common.Rpc
 	rabbitClient  *common.RabbitClient
 	symbolService *service.SymbolsService
 	symbol_service.UnimplementedSymbolServiceServer
 }
 
 func NewSymbolsServiceServer(
-	rpcClient *common.Rpc,
 	symbolsService *service.SymbolsService) *SymbolsServiceServer {
 	return &SymbolsServiceServer{
-		rpcClient:     rpcClient,
 		symbolService: symbolsService,
 	}
 }
@@ -96,54 +88,7 @@ func (s *SymbolsServiceServer) Recalculate(ctx context.Context, req *symbol_serv
 		return nil, status.Error(codes.Unauthenticated, "provide user token")
 	}
 
-	grpcClientContext, c1 := context.WithTimeout(ctx, 60*time.Second)
-	defer c1()
-
-	client := worker_symbol_service.NewWorkerSymbolServiceClient(s.rpcClient.Connection)
-	stream, err := client.RecalculateSymbols(grpcClientContext)
-
-	if err != nil {
-		return nil, err
-	}
-
-	go func() {
-		symbols, _, err := s.symbolService.GetPaged(ctx, &symbol_service.ReadPagedSymbolRequest{
-			Filter: &symbol_service.SymbolFilter{
-				PageSize:   20000,
-				PageNumber: 1,
-				Order:      "identifier",
-				Ascending:  true,
-			},
-		})
-		if err != nil {
-			fmt.Printf("failed to get stored symbols %v", err)
-			return
-		}
-		for _, sym := range *symbols {
-			if err := stream.Send(sym); err != nil {
-				fmt.Printf("failed while sending symbols to service: %v", err)
-			}
-		}
-		if err := stream.CloseSend(); err != nil {
-			fmt.Printf("failed to close send stream: %v", err)
-			return
-		}
-	}()
-
-	var result []*worker_symbol_service.RecalculateSymbolsResponse
-	for {
-		if res, err := stream.Recv(); err != nil {
-			if err == io.EOF {
-				break
-			}
-			log.Printf("error while receiving: %v", err)
-			return nil, err
-		} else {
-			result = append(result, res)
-		}
-	}
-
-	res, err := s.symbolService.ProcessRecalculationResponse(result, &ctx)
+	res, err := s.symbolService.Recalculate(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -3,8 +3,13 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 	"sync"
 	"time"
+
+	"google.golang.org/grpc/grpclog"
+
+	"github.com/vectorman1/analysis/analysis-api/common"
 
 	db2 "github.com/vectorman1/analysis/analysis-api/model/db"
 
@@ -24,9 +29,9 @@ type symbolsService interface {
 	Details(ctx context.Context, req *symbol_service.SymbolDetailsRequest) (*symbol_service.SymbolDetailsResponse, error)
 	InsertBulk(timeoutContext context.Context, symbols []*proto_models.Symbol) (bool, error)
 	// service methods
-	ProcessRecalculationResponse(
+	processRecalculationResponse(
 		input []*worker_symbol_service.RecalculateSymbolsResponse,
-		ctx *context.Context) (*symbol_service.RecalculateSymbolResponse, error)
+		ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error)
 	symbolDataToEntity(in *[]*proto_models.Symbol) ([]*db2.Symbol, error)
 }
 
@@ -36,18 +41,21 @@ type SymbolsService struct {
 	symbolsRepository        *db.SymbolRepository
 	symbolOverviewRepository *db.SymbolOverviewRepository
 	alphaVantageService      *AlphaVantageService
+	externalSymbolService    *ExternalSymbolService
 }
 
 func NewSymbolsService(
 	symbolsRepository *db.SymbolRepository,
 	symbolOverviewRepository *db.SymbolOverviewRepository,
 	currencyRepository *db.CurrencyRepository,
-	alphaVantageService *AlphaVantageService) *SymbolsService {
+	alphaVantageService *AlphaVantageService,
+	externalSymbolService *ExternalSymbolService) *SymbolsService {
 	return &SymbolsService{
 		symbolsRepository:        symbolsRepository,
 		symbolOverviewRepository: symbolOverviewRepository,
 		currencyRepository:       currencyRepository,
 		alphaVantageService:      alphaVantageService,
+		externalSymbolService:    externalSymbolService,
 	}
 }
 
@@ -125,9 +133,36 @@ func (s *SymbolsService) InsertBulk(timeoutContext context.Context, symbols []*p
 	return true, nil
 }
 
-func (s *SymbolsService) ProcessRecalculationResponse(
+func (s *SymbolsService) Recalculate(ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error) {
+	oldSymbols, _, err := s.GetPaged(ctx, &symbol_service.ReadPagedSymbolRequest{
+		Filter: &symbol_service.SymbolFilter{
+			PageSize:   100000,
+			PageNumber: 1,
+			Order:      "identifier",
+			Ascending:  true,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	externalSymbols, err := s.externalSymbolService.GetLatest(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	result := s.generateRecalculationResult(*externalSymbols, *oldSymbols)
+	response, err := s.processRecalculationResponse(result, ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
+func (s *SymbolsService) processRecalculationResponse(
 	input []*worker_symbol_service.RecalculateSymbolsResponse,
-	ctx *context.Context) (*symbol_service.RecalculateSymbolResponse, error) {
+	ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error) {
 
 	var createSymbols []*proto_models.Symbol
 	var updateSymbols []*proto_models.Symbol
@@ -147,7 +182,7 @@ func (s *SymbolsService) ProcessRecalculationResponse(
 		}
 	}
 
-	tctx, c := context.WithTimeout(*ctx, 5*time.Second)
+	tctx, c := context.WithTimeout(ctx, 5*time.Second)
 	defer c()
 
 	tx, err := s.symbolsRepository.BeginTx(&tctx, &pgx.TxOptions{})
@@ -249,4 +284,84 @@ func (s *SymbolsService) symbolDataToEntity(in *[]*proto_models.Symbol) ([]*db2.
 	}
 
 	return result, nil
+}
+
+func (s *SymbolsService) generateRecalculationResult(newSymbols []*proto_models.Symbol, oldSymbols []*proto_models.Symbol) []*worker_symbol_service.RecalculateSymbolsResponse {
+	unique := make(map[string]*worker_symbol_service.RecalculateSymbolsResponse)
+
+	// generate create, update and ignore responses
+	for _, newSym := range newSymbols {
+		if ok, oldSym := common.ContainsSymbol(newSym.Uuid, oldSymbols); !ok {
+			if unique[newSym.Uuid] == nil {
+				unique[newSym.Uuid] =
+					&worker_symbol_service.RecalculateSymbolsResponse{
+						Type:   worker_symbol_service.RecalculateSymbolsResponse_CREATE,
+						Symbol: newSym,
+					}
+				continue
+			} else {
+				log.Println("collision on create: ", newSym)
+				log.Println("existing: ", unique[newSym.Uuid].Type, unique[newSym.Uuid])
+			}
+		} else {
+			// check if any fields from the new symbol are different from the old
+			shouldUpdate := false
+			if oldSym.Name != newSym.Name {
+				shouldUpdate = true
+			} else if oldSym.MarketName != newSym.MarketName {
+				shouldUpdate = true
+			} else if oldSym.MarketHoursGmt != newSym.MarketHoursGmt {
+				shouldUpdate = true
+			}
+
+			// if any fields are updated, send and update response, otherwise, send it back and ignore it
+			if shouldUpdate {
+				if unique[newSym.Uuid] == nil {
+					unique[newSym.Uuid] =
+						&worker_symbol_service.RecalculateSymbolsResponse{
+							Type:   worker_symbol_service.RecalculateSymbolsResponse_UPDATE,
+							Symbol: newSym,
+						}
+					continue
+				} else {
+					grpclog.Infoln("collision on update: ", newSym)
+					grpclog.Infoln("existing: ", unique[newSym.Uuid].Type, unique[newSym.Uuid])
+				}
+			} else {
+				if unique[newSym.Uuid] == nil {
+					unique[newSym.Uuid] =
+						&worker_symbol_service.RecalculateSymbolsResponse{
+							Type:   worker_symbol_service.RecalculateSymbolsResponse_IGNORE,
+							Symbol: newSym,
+						}
+					continue
+				} else {
+					grpclog.Infoln("collision on ignore: ", newSym)
+					grpclog.Infoln("existing: ", unique[newSym.Uuid].Type, unique[newSym.Uuid])
+				}
+			}
+		}
+	}
+
+	// generate delete responses
+	for _, oldSym := range oldSymbols {
+		if ok, _ := common.ContainsSymbol(oldSym.Uuid, newSymbols); !ok {
+			if unique[oldSym.Uuid] == nil {
+				unique[oldSym.Uuid] = &worker_symbol_service.RecalculateSymbolsResponse{
+					Type:   worker_symbol_service.RecalculateSymbolsResponse_DELETE,
+					Symbol: oldSym,
+				}
+			} else {
+				grpclog.Infoln("collision: ", oldSym)
+				grpclog.Infoln("existing: ", unique[oldSym.Uuid].Type, unique[oldSym.Uuid])
+			}
+		}
+	}
+
+	var result []*worker_symbol_service.RecalculateSymbolsResponse
+	for _, v := range unique {
+		result = append(result, v)
+	}
+
+	return result
 }
