@@ -1,6 +1,7 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE SCHEMA IF NOT EXISTS analysis;
+CREATE SCHEMA IF NOT EXISTS "user";
 
 DO
 $do$
@@ -15,6 +16,7 @@ $do$;
 
 GRANT ALL PRIVILEGES ON DATABASE analysis TO harb;
 GRANT ALL PRIVILEGES ON SCHEMA analysis TO harb;
+GRANT ALL PRIVILEGES ON SCHEMA "user" TO harb;
 
 CREATE TABLE IF NOT EXISTS analysis.currencies
 (
@@ -26,7 +28,7 @@ CREATE TABLE IF NOT EXISTS analysis.currencies
 CREATE TABLE IF NOT EXISTS analysis.symbols
 (
     id SERIAL PRIMARY KEY,
-    uuid uuid NOT NULL,
+    uuid uuid UNIQUE NOT NULL,
     currency_id BIGINT NOT NULL,
     isin TEXT NOT NULL,
     identifier TEXT NOT NULL,
@@ -49,7 +51,7 @@ CREATE TABLE IF NOT EXISTS analysis.histories
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT fk_histories_symbol FOREIGN KEY (symbol_uuid) REFERENCES analysis.symbols (uuid) ON UPDATE NO ACTION ON DELETE NO ACTION
-);
+    );
 
 CREATE TABLE IF NOT EXISTS analysis.symbol_overviews
 (
@@ -108,7 +110,7 @@ CREATE TABLE IF NOT EXISTS analysis.symbol_overviews
     last_split_date TEXT NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL,
     CONSTRAINT fk_overview_symbol FOREIGN KEY (symbol_uuid) REFERENCES analysis.symbols (uuid) ON UPDATE NO ACTION ON DELETE NO ACTION
-)
+    );
 
 CREATE TABLE IF NOT EXISTS analysis.reports
 (
@@ -157,7 +159,6 @@ CREATE TABLE IF NOT EXISTS analysis.signal_reports
     CONSTRAINT fk_signal_report_report FOREIGN KEY (report_id) REFERENCES analysis.reports (id) ON UPDATE NO ACTION ON DELETE NO ACTION
     );
 
-CREATE SCHEMA IF NOT EXISTS "user";
 
 CREATE TABLE IF NOT EXISTS "user".users
 (
@@ -169,4 +170,4 @@ CREATE TABLE IF NOT EXISTS "user".users
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     deleted_at TIMESTAMPTZ NULL DEFAULT NULL
-);
+    );
