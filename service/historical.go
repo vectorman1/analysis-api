@@ -29,7 +29,7 @@ func NewHistoricalService(historicalRepository *db.HistoricalRepository, symbolR
 }
 
 func (h *HistoricalService) GetBySymbolUuid(ctx *context.Context, req *historical_service.GetBySymbolUuidRequest) (*[]*historical_service.Historical, error) {
-	sym, err := h.symbolRepository.GetByUuid(*ctx, req.SymbolUuid)
+	sym, err := h.symbolRepository.GetByUuid(ctx, req.SymbolUuid)
 	if err != nil {
 		return nil, err
 	}

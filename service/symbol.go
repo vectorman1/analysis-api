@@ -25,13 +25,13 @@ import (
 
 type symbolsService interface {
 	// repo methods
-	GetPaged(ctx context.Context, req *symbol_service.ReadPagedSymbolRequest) (*[]*proto_models.Symbol, uint, error)
-	Details(ctx context.Context, req *symbol_service.SymbolDetailsRequest) (*symbol_service.SymbolDetailsResponse, error)
-	InsertBulk(timeoutContext context.Context, symbols []*proto_models.Symbol) (bool, error)
+	GetPaged(ctx *context.Context, req *symbol_service.ReadPagedSymbolRequest) (*[]*proto_models.Symbol, uint, error)
+	Details(ctx *context.Context, req *symbol_service.SymbolDetailsRequest) (*symbol_service.SymbolDetailsResponse, error)
+	InsertBulk(ctx *context.Context, symbols []*proto_models.Symbol) (bool, error)
 	// service methods
 	processRecalculationResponse(
 		input []*worker_symbol_service.RecalculateSymbolsResponse,
-		ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error)
+		ctx *context.Context) (*symbol_service.RecalculateSymbolResponse, error)
 	symbolDataToEntity(in *[]*proto_models.Symbol) ([]*db2.Symbol, error)
 }
 
@@ -59,7 +59,7 @@ func NewSymbolsService(
 	}
 }
 
-func (s *SymbolsService) GetPaged(ctx context.Context, req *symbol_service.ReadPagedSymbolRequest) (*[]*proto_models.Symbol, uint, error) {
+func (s *SymbolsService) GetPaged(ctx *context.Context, req *symbol_service.ReadPagedSymbolRequest) (*[]*proto_models.Symbol, uint, error) {
 	var res []*proto_models.Symbol
 	syms, totalItemsCount, err := s.symbolsRepository.GetPaged(ctx, req)
 	if err != nil {
@@ -72,7 +72,7 @@ func (s *SymbolsService) GetPaged(ctx context.Context, req *symbol_service.ReadP
 	return &res, totalItemsCount, nil
 }
 
-func (s *SymbolsService) Details(ctx context.Context, req *symbol_service.SymbolDetailsRequest) (*symbol_service.SymbolDetailsResponse, error) {
+func (s *SymbolsService) Details(ctx *context.Context, req *symbol_service.SymbolDetailsRequest) (*symbol_service.SymbolDetailsResponse, error) {
 	symbol, err := s.symbolsRepository.GetByUuid(ctx, req.Uuid)
 	if err != nil {
 		return nil, err
@@ -133,7 +133,7 @@ func (s *SymbolsService) InsertBulk(timeoutContext context.Context, symbols []*p
 	return true, nil
 }
 
-func (s *SymbolsService) Recalculate(ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error) {
+func (s *SymbolsService) Recalculate(ctx *context.Context) (*symbol_service.RecalculateSymbolResponse, error) {
 	oldSymbols, _, err := s.GetPaged(ctx, &symbol_service.ReadPagedSymbolRequest{
 		Filter: &symbol_service.SymbolFilter{
 			PageSize:   100000,
@@ -162,7 +162,7 @@ func (s *SymbolsService) Recalculate(ctx context.Context) (*symbol_service.Recal
 
 func (s *SymbolsService) processRecalculationResponse(
 	input []*worker_symbol_service.RecalculateSymbolsResponse,
-	ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error) {
+	ctx *context.Context) (*symbol_service.RecalculateSymbolResponse, error) {
 
 	var createSymbols []*proto_models.Symbol
 	var updateSymbols []*proto_models.Symbol
@@ -182,57 +182,59 @@ func (s *SymbolsService) processRecalculationResponse(
 		}
 	}
 
-	tctx, c := context.WithTimeout(ctx, 10*time.Second)
+	fmt.Println("starting save of update")
+
+	timeoutContext, c := context.WithTimeout(*ctx, 10*time.Second)
 	defer c()
 
-	tx, err := s.symbolsRepository.BeginTx(&tctx, &pgx.TxOptions{})
+	tx, err := s.symbolsRepository.BeginTx(&timeoutContext, &pgx.TxOptions{})
 	if err != nil {
 		return nil, err
 	}
 
+	fmt.Println("getting symbols from protos")
 	// create new symbols
 	createEntities, err := s.symbolDataToEntity(&createSymbols)
 	if err != nil {
-		tx.RollbackEx(tctx)
-		return nil, err
-	}
-	temp := make(map[string][]*db2.Symbol)
-	for _, sym := range createEntities {
-		var u string
-		_ = sym.Uuid.AssignTo(&u)
-		temp[u] = append(temp[u], sym)
-	}
-	_, err = s.symbolsRepository.InsertBulk(tx, &tctx, createEntities)
-	if err != nil {
-		tx.RollbackEx(tctx)
+		tx.RollbackEx(timeoutContext)
 		return nil, err
 	}
 
+	fmt.Println("inserting new symbols")
+	_, err = s.symbolsRepository.InsertBulk(tx, &timeoutContext, createEntities)
+	if err != nil {
+		tx.RollbackEx(timeoutContext)
+		return nil, err
+	}
+
+	fmt.Println("deleting old symbols")
 	// delete entities
 	deleteEntities, err := s.symbolDataToEntity(&deleteSymbols)
 	if err != nil {
-		tx.RollbackEx(tctx)
+		tx.RollbackEx(timeoutContext)
 		return nil, err
 	}
-	_, err = s.symbolsRepository.DeleteBulk(tx, &tctx, deleteEntities)
+	_, err = s.symbolsRepository.DeleteBulk(tx, &timeoutContext, deleteEntities)
 	if err != nil {
-		tx.RollbackEx(tctx)
+		tx.RollbackEx(timeoutContext)
 		return nil, err
 	}
 
+	fmt.Println("updating old symbols")
 	// update entities
 	updateEntities, err := s.symbolDataToEntity(&updateSymbols)
 	if err != nil {
-		tx.RollbackEx(tctx)
+		tx.RollbackEx(timeoutContext)
 		return nil, err
 	}
-	_, err = s.symbolsRepository.UpdateBulk(tx, &tctx, updateEntities)
+	_, err = s.symbolsRepository.UpdateBulk(tx, &timeoutContext, updateEntities)
 	if err != nil {
-		tx.RollbackEx(tctx)
+		tx.RollbackEx(timeoutContext)
 		return nil, err
 	}
 
-	err = tx.CommitEx(tctx)
+	fmt.Println("saving")
+	err = tx.CommitEx(timeoutContext)
 	if err != nil {
 		return nil, err
 	}

@@ -19,7 +19,7 @@ import (
 )
 
 type externalSymbolService interface {
-	GetLatest(context.Context) (*[]*proto_models.Symbol, error)
+	GetLatest(*context.Context) (*[]*proto_models.Symbol, error)
 }
 
 type ExternalSymbolService struct {
@@ -29,9 +29,9 @@ func NewExternalSymbolService() *ExternalSymbolService {
 	return &ExternalSymbolService{}
 }
 
-func (s *ExternalSymbolService) GetLatest(ctx context.Context) (*[]*proto_models.Symbol, error) {
+func (s *ExternalSymbolService) GetLatest(ctx *context.Context) (*[]*proto_models.Symbol, error) {
 	bctx, c1 := chromedp.NewContext(
-		ctx,
+		*ctx,
 		chromedp.WithLogf(alaskalog.Logger.Infof),
 	)
 	defer c1()

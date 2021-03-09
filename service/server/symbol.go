@@ -36,7 +36,7 @@ func (s *SymbolsServiceServer) ReadPaged(ctx context.Context, req *symbol_servic
 	timeoutContext, c := context.WithTimeout(ctx, 5*time.Second)
 	defer c()
 
-	res, totalItemsCount, err := s.symbolService.GetPaged(timeoutContext, req)
+	res, totalItemsCount, err := s.symbolService.GetPaged(&timeoutContext, req)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -70,7 +70,7 @@ func (s *SymbolsServiceServer) Details(ctx context.Context, req *symbol_service.
 		return nil, status.Error(codes.Unauthenticated, "provide user token")
 	}
 
-	res, err := s.symbolService.Details(ctx, req)
+	res, err := s.symbolService.Details(&ctx, req)
 	if err != nil {
 		st, ok := status.FromError(err)
 		if ok {
@@ -88,7 +88,7 @@ func (s *SymbolsServiceServer) Recalculate(ctx context.Context, req *symbol_serv
 		return nil, status.Error(codes.Unauthenticated, "provide user token")
 	}
 
-	res, err := s.symbolService.Recalculate(ctx)
+	res, err := s.symbolService.Recalculate(&ctx)
 	if err != nil {
 		return nil, err
 	}

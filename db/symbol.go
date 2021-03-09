@@ -16,8 +16,8 @@ import (
 )
 
 type symbolRepository interface {
-	GetPaged(ctx context.Context, req *symbol_service.ReadPagedSymbolRequest) (*[]db.Symbol, uint, error)
-	GetByUuid(ctx context.Context, uuid string) (*db.Symbol, error)
+	GetPaged(ctx *context.Context, req *symbol_service.ReadPagedSymbolRequest) (*[]db.Symbol, uint, error)
+	GetByUuid(ctx *context.Context, uuid string) (*db.Symbol, error)
 	InsertBulk(tx *pgx.Tx, timeoutContext *context.Context, symbols []*db.Symbol) (bool, error)
 	DeleteBulk(tx *pgx.Tx, timeoutContext *context.Context, symbols []*db.Symbol) (bool, error)
 	UpdateBulk(tx *pgx.Tx, timeoutContext *context.Context, symbols []*db.Symbol) (bool, error)
@@ -37,7 +37,7 @@ func NewSymbolRepository(db *pgx.ConnPool) *SymbolRepository {
 }
 
 // GetPaged returns a paged response of symbols stored
-func (r *SymbolRepository) GetPaged(ctx context.Context, req *symbol_service.ReadPagedSymbolRequest) (*[]db.Symbol, uint, error) {
+func (r *SymbolRepository) GetPaged(ctx *context.Context, req *symbol_service.ReadPagedSymbolRequest) (*[]db.Symbol, uint, error) {
 	// generate query
 	order := common.FormatOrderQuery(req.Filter.Order, req.Filter.Ascending)
 	queryBuilder := squirrel.
@@ -64,7 +64,7 @@ func (r *SymbolRepository) GetPaged(ctx context.Context, req *symbol_service.Rea
 		return nil, 0, err
 	}
 
-	rows, err := r.db.QueryEx(ctx, q, nil, args...)
+	rows, err := r.db.QueryEx(*ctx, q, nil, args...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -100,7 +100,7 @@ func (r *SymbolRepository) GetPaged(ctx context.Context, req *symbol_service.Rea
 	return &result, totalItems, nil
 }
 
-func (r *SymbolRepository) GetByUuid(ctx context.Context, symbolUuid string) (*db.Symbol, error) {
+func (r *SymbolRepository) GetByUuid(ctx *context.Context, symbolUuid string) (*db.Symbol, error) {
 	u, err := uuid.FromString(symbolUuid)
 	if err != nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (r *SymbolRepository) GetByUuid(ctx context.Context, symbolUuid string) (*d
 	}
 
 	sym := db.Symbol{Currency: db.Currency{}}
-	row := r.db.QueryRowEx(ctx, query, &pgx.QueryExOptions{})
+	row := r.db.QueryRowEx(*ctx, query, &pgx.QueryExOptions{})
 	if err = row.Scan(
 		&sym.ID,
 		&sym.Uuid,
@@ -242,7 +242,7 @@ func (r *SymbolRepository) DeleteBulk(tx *pgx.Tx, timeoutContext *context.Contex
 
 // UpdateBulk updates all columns of the symbol with the matching uuid
 // with the passed symbol values
-func (r *SymbolRepository) UpdateBulk(tx *pgx.Tx, timeoutContext *context.Context, symbols []*db.Symbol) (bool, error) {
+func (r *SymbolRepository) UpdateBulk(tx *pgx.Tx, ctx *context.Context, symbols []*db.Symbol) (bool, error) {
 	// split updates in batches
 	workList := make(chan []*db.Symbol)
 	go func() {
@@ -281,7 +281,7 @@ func (r *SymbolRepository) UpdateBulk(tx *pgx.Tx, timeoutContext *context.Contex
 
 			query, args, _ := q.ToSql()
 			if len(args) > 0 {
-				_, err := tx.ExecEx(*timeoutContext, query, &pgx.QueryExOptions{}, args...)
+				_, err := tx.ExecEx(*ctx, query, &pgx.QueryExOptions{}, args...)
 				if err != nil {
 					return false, err
 				}
