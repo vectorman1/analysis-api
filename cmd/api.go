@@ -75,11 +75,6 @@ func RunServer() error {
 }
 
 func initializeServices(ctx context.Context, dbConnPool *pgx.ConnPool, config *common.Config) (*grpc_server.GRPCServer, error) {
-	//w := zerolog.NewConsoleWriter()
-	//
-	//symbolsQueue := common.NewRabbitClient("symbols.stream", "symbols", config.RabbitMqConn, sigs, zerolog.New(w))
-	//defer symbolsQueue.Close()
-
 	symbolRepository := db.NewSymbolRepository(dbConnPool)
 	currencyRepository := db.NewCurrencyRepository(dbConnPool)
 	symbolOverviewRepository := db.NewSymbolOverviewRepository(dbConnPool)

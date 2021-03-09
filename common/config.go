@@ -17,15 +17,6 @@ const (
 )
 
 type Config struct {
-	Environment Environment `json:"environment"`
-
-	// RabbitMQ connection URL
-	RabbitMqConn string `json:"rabbit_mq_conn"`
-
-	// address of grpc worker
-	WorkerHost string `json:"worker_host"`
-	WorkerPort uint64 `json:"worker_port"`
-
 	// Alpha Vantage API Key
 	AlphaVantageApiKey string `json:"alpha_vantage_api_key"`
 
