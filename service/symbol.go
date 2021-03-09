@@ -182,7 +182,7 @@ func (s *SymbolsService) processRecalculationResponse(
 		}
 	}
 
-	tctx, c := context.WithTimeout(ctx, 5*time.Second)
+	tctx, c := context.WithTimeout(ctx, 10*time.Second)
 	defer c()
 
 	tx, err := s.symbolsRepository.BeginTx(&tctx, &pgx.TxOptions{})
