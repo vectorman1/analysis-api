@@ -33,13 +33,13 @@ func RunServer(ctx context.Context, grpcPort, httpPort string) error {
 	mux := runtime.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithInsecure()}
 
-	if err := symbol_service.RegisterSymbolServiceHandlerFromEndpoint(ctx, mux, "localhost:"+grpcPort, opts); err != nil {
+	if err := symbol_service.RegisterSymbolServiceHandlerFromEndpoint(ctx, mux, "0.0.0.0:"+grpcPort, opts); err != nil {
 		logger_grpc.Log.Fatal("failed to start HTTP gateway", zap.String("reason", err.Error()))
 	}
-	if err := user_service.RegisterUserServiceHandlerFromEndpoint(ctx, mux, "localhost:"+grpcPort, opts); err != nil {
+	if err := user_service.RegisterUserServiceHandlerFromEndpoint(ctx, mux, "0.0.0.0:"+grpcPort, opts); err != nil {
 		logger_grpc.Log.Fatal("failed to start HTTP gateway", zap.String("reason", err.Error()))
 	}
-	if err := historical_service.RegisterHistoricalServiceHandlerFromEndpoint(ctx, mux, "localhost:"+grpcPort, opts); err != nil {
+	if err := historical_service.RegisterHistoricalServiceHandlerFromEndpoint(ctx, mux, "0.0.0.0:"+grpcPort, opts); err != nil {
 		logger_grpc.Log.Fatal("failed to start HTTP gateway", zap.String("reason", err.Error()))
 	}
 
@@ -47,7 +47,7 @@ func RunServer(ctx context.Context, grpcPort, httpPort string) error {
 	corsH := cors_rest.GetCORS()
 
 	srv := &http.Server{
-		Addr: ":" + httpPort,
+		Addr: "0.0.0.0:" + httpPort,
 		Handler: corsH(tracer_rest.AddRequestID(
 			logger_rest.AddLogger(logger_grpc.Log, mux))),
 	}
