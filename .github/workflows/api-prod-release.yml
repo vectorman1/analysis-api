@@ -29,3 +29,7 @@ jobs:
           file: ./Dockerfile
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
+      - name: Send update webhook to swarm
+        uses: zzzze/webhook-trigger@master
+        with:
+          webhook_url: ${{ secrets.DEPLOY_WEBHOOK }}
