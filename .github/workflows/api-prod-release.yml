@@ -11,18 +11,6 @@ jobs:
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-ruby@v1
-      - name: Send status started update
-        env:
-          JOB_STATUS: ${{ job.status }}
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          HOOK_OS_NAME: ${{ runner.os }}
-          WORKFLOW_NAME: ${{ github.workflow }}
-        run: |
-          git clone https://github.com/DiscordHooks/github-actions-discord-webhook.git webhook
-          bash webhook/send.sh $JOB_STATUS $DISCORD_WEBHOOK_URL
-        shell: bash
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
