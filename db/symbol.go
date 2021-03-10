@@ -155,9 +155,7 @@ func (r *SymbolRepository) InsertBulk(tx *pgx.Tx, ctx *context.Context, symbols 
 		}
 	}()
 
-	timestampTzNow := pgtype.Timestamptz{}
-	_ = timestampTzNow.Set(time.Now())
-	// generate query for insert from batches
+	now := time.Now() // generate query for insert from batches
 	for list := range workList {
 		q := squirrel.
 			Insert("analysis.symbols").
@@ -173,8 +171,8 @@ func (r *SymbolRepository) InsertBulk(tx *pgx.Tx, ctx *context.Context, symbols 
 				&sym.MinimumOrderQuantity,
 				&sym.MarketName,
 				&sym.MarketHoursGmt,
-				&timestampTzNow,
-				&timestampTzNow,
+				now,
+				now,
 				&pgtype.Timestamptz{Status: pgtype.Null})
 		}
 
@@ -210,8 +208,7 @@ func (r *SymbolRepository) DeleteBulk(tx *pgx.Tx, timeoutContext *context.Contex
 		}
 	}()
 
-	deletedAt := pgtype.Timestamptz{}
-	_ = deletedAt.Set(time.Now())
+	now := time.Now()
 	// generate query for update from batches
 	for list := range workList {
 		for _, sym := range list {
@@ -221,7 +218,7 @@ func (r *SymbolRepository) DeleteBulk(tx *pgx.Tx, timeoutContext *context.Contex
 			q := squirrel.Update("analysis.symbols")
 
 			q = q.
-				Set("deleted_at", deletedAt).
+				Set("deleted_at", now).
 				PlaceholderFormat(squirrel.Dollar).
 				Where(squirrel.Eq{"uuid::text": u})
 
@@ -259,8 +256,7 @@ func (r *SymbolRepository) UpdateBulk(tx *pgx.Tx, ctx *context.Context, symbols 
 		}
 	}()
 
-	updatedAt := pgtype.Timestamptz{}
-	_ = updatedAt.Set(time.Now())
+	now := time.Now()
 	for list := range workList {
 		for _, sym := range list {
 			var u string
@@ -273,7 +269,7 @@ func (r *SymbolRepository) UpdateBulk(tx *pgx.Tx, ctx *context.Context, symbols 
 			q = q.
 				Set("name", sym.Name).
 				Set("market_hours_gmt", sym.MarketHoursGmt).
-				Set("updated_at", updatedAt).
+				Set("updated_at", now).
 				Where(squirrel.Eq{"uuid::text": u})
 
 			query, args, _ := q.ToSql()
