@@ -4,13 +4,15 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/vectorman1/analysis/analysis-api/common"
+
 	"github.com/gorilla/handlers"
 )
 
 // GetCORS returns a handler with configured CORS
 func GetCORS() func(http.Handler) http.Handler {
-	headers := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
-	methods := handlers.AllowedMethods([]string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions})
+	headers := handlers.AllowedHeaders(common.GetAllowedHeaders())
+	methods := handlers.AllowedMethods(common.GetAllowedMethods())
 	originsAllowed := handlers.AllowedOrigins([]string{"http://localhost:4200", "https://analysis.dystopia.systems"})
 
 	return handlers.CORS(headers, methods, originsAllowed)
@@ -30,9 +32,7 @@ func PassCors(h http.Handler) http.Handler {
 }
 
 func preflightHandler(w http.ResponseWriter, r *http.Request) {
-	headers := []string{"Content-Type", "Accept"}
-	w.Header().Set("Access-Control-Allow-Headers", strings.Join(headers, ","))
-	methods := []string{http.MethodGet, http.MethodHead, http.MethodPost, http.MethodPut, http.MethodDelete}
-	w.Header().Set("Access-Control-Allow-Methods", strings.Join(methods, ","))
+	w.Header().Set("Access-Control-Allow-Headers", strings.Join(common.GetAllowedHeaders(), ","))
+	w.Header().Set("Access-Control-Allow-Methods", strings.Join(common.GetAllowedMethods(), ","))
 	return
 }
