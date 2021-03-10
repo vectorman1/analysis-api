@@ -11,7 +11,7 @@ import (
 func GetCORS() func(http.Handler) http.Handler {
 	headers := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
 	methods := handlers.AllowedMethods([]string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions})
-	originsAllowed := handlers.AllowedOrigins([]string{"localhost", "analysis.dystopia.systems"})
+	originsAllowed := handlers.AllowedOrigins([]string{"http://localhost:4200", "https://analysis.dystopia.systems"})
 
 	return handlers.CORS(headers, methods, originsAllowed)
 }
