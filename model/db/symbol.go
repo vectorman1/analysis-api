@@ -1,6 +1,7 @@
 package db
 
 import (
+	"github.com/golang/protobuf/ptypes"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/vectorman1/analysis/analysis-api/generated/proto_models"
 )
@@ -48,7 +49,7 @@ func (s *Symbol) ToProtoObject() *proto_models.Symbol {
 	var u string
 	s.Uuid.AssignTo(&u)
 
-	return &proto_models.Symbol{
+	res := &proto_models.Symbol{
 		Id:                   uint64(s.ID),
 		CurrencyCode:         s.CurrencyCode,
 		Isin:                 s.Isin,
@@ -59,4 +60,15 @@ func (s *Symbol) ToProtoObject() *proto_models.Symbol {
 		MarketName:           s.MarketName,
 		MarketHoursGmt:       s.MarketHoursGmt,
 	}
+
+	if createdAt, err := ptypes.TimestampProto(s.CreatedAt.Time); err == nil {
+		res.CreatedAt = createdAt
+	}
+	if updatedAt, err := ptypes.TimestampProto(s.UpdatedAt.Time); err == nil {
+		res.UpdatedAt = updatedAt
+	}
+	if deletedAt, err := ptypes.TimestampProto(s.DeletedAt.Time); err == nil {
+		res.DeletedAt = deletedAt
+	}
+	return res
 }
