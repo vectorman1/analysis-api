@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
@@ -17,7 +16,6 @@ import (
 
 	"github.com/jackc/pgx"
 
-	"github.com/jackc/pgx/pgtype"
 	"github.com/vectorman1/analysis/analysis-api/db"
 	"github.com/vectorman1/analysis/analysis-api/generated/proto_models"
 	"github.com/vectorman1/analysis/analysis-api/generated/symbol_service"
@@ -216,120 +214,100 @@ func (s *SymbolsService) processRecalculationResponse(
 
 func (s *SymbolsService) symbolDataToEntity(in *[]*proto_models.Symbol) ([]*db2.Symbol, error) {
 	var result []*db2.Symbol
-	var wg sync.WaitGroup
 
-	wg.Add(len(*in))
 	for _, sym := range *in {
-		e := db2.Symbol{}
-
-		// get or create the currency of the symbol
-		curr, err := s.currencyRepository.GetOrCreate(sym.Currency.Code)
-		if err != nil {
-			return nil, err
-		}
-
-		e.Uuid = pgtype.UUID{}
-		err = e.Uuid.Set(sym.Uuid)
-		if err != nil {
-			return nil, err
-		}
-
-		e.CurrencyID = curr.ID
-		e.Isin = sym.Isin
-		e.Identifier = sym.Identifier
-		e.Name = sym.Name
-		var moq pgtype.Float4
-		_ = moq.Set(sym.MinimumOrderQuantity)
-		e.MinimumOrderQuantity = moq
-		e.MarketName = sym.MarketName
-		e.MarketHoursGmt = sym.MarketHoursGmt
-
-		e.CreatedAt = pgtype.Timestamptz{Time: time.Now(), Status: pgtype.Present}
-		e.UpdatedAt = pgtype.Timestamptz{Time: time.Now(), Status: pgtype.Present}
-		e.DeletedAt = pgtype.Timestamptz{Status: pgtype.Null}
-
-		result = append(result, &e)
+		result = append(result, db2.Symbol{}.FromProtoObject(sym))
 	}
 
 	return result, nil
 }
 
 func (s *SymbolsService) generateRecalculationResult(newSymbols []*proto_models.Symbol, oldSymbols []*proto_models.Symbol) []*worker_symbol_service.RecalculateSymbolsResponse {
-	unique := make(map[string]*worker_symbol_service.RecalculateSymbolsResponse)
-
+	var wg sync.WaitGroup
+	unique := sync.Map{}
 	// generate create, update and ignore responses
 	for _, newSym := range newSymbols {
-		if ok, oldSym := common.ContainsSymbol(newSym.Uuid, oldSymbols); !ok {
-			if unique[newSym.Uuid] == nil {
-				unique[newSym.Uuid] =
-					&worker_symbol_service.RecalculateSymbolsResponse{
-						Type:   worker_symbol_service.RecalculateSymbolsResponse_CREATE,
-						Symbol: newSym,
-					}
-				continue
-			} else {
-				log.Println("collision on create: ", newSym)
-				log.Println("existing: ", unique[newSym.Uuid].Type, unique[newSym.Uuid])
-			}
-		} else {
-			// check if any fields from the new symbol are different from the old
-			shouldUpdate := false
-			if oldSym.Name != newSym.Name {
-				shouldUpdate = true
-			} else if oldSym.MarketName != newSym.MarketName {
-				shouldUpdate = true
-			} else if oldSym.MarketHoursGmt != newSym.MarketHoursGmt {
-				shouldUpdate = true
-			}
+		go func(wg *sync.WaitGroup, s *proto_models.Symbol) {
+			wg.Add(1)
+			defer wg.Done()
 
-			// if any fields are updated, send and update response, otherwise, send it back and ignore it
-			if shouldUpdate {
-				if unique[newSym.Uuid] == nil {
-					unique[newSym.Uuid] =
-						&worker_symbol_service.RecalculateSymbolsResponse{
-							Type:   worker_symbol_service.RecalculateSymbolsResponse_UPDATE,
-							Symbol: newSym,
-						}
-					continue
+			mapValue, exists := unique.Load(s.Uuid)
+			if !exists {
+				if ok, oldSym := common.ContainsSymbol(s.Uuid, oldSymbols); !ok {
+					if !ok {
+						wg.Add(1)
+						defer wg.Done()
+						unique.Store(s.Uuid,
+							&worker_symbol_service.RecalculateSymbolsResponse{
+								Type:   worker_symbol_service.RecalculateSymbolsResponse_CREATE,
+								Symbol: s,
+							})
+						return
+					}
 				} else {
-					grpclog.Infoln("collision on update: ", newSym)
-					grpclog.Infoln("existing: ", unique[newSym.Uuid].Type, unique[newSym.Uuid])
+					// check if any fields from the new symbol are different from the old
+					shouldUpdate := false
+					if oldSym.Name != s.Name {
+						shouldUpdate = true
+					} else if oldSym.MarketHoursGmt != s.MarketHoursGmt {
+						shouldUpdate = true
+					}
+
+					// Identifier, ISIN and Market Name are not checked, as they are used in the uuids of the symbols
+					// if any fields are updated, send and update response, otherwise, send it back and ignore it
+					if shouldUpdate {
+						unique.Store(s.Uuid,
+							&worker_symbol_service.RecalculateSymbolsResponse{
+								Type:   worker_symbol_service.RecalculateSymbolsResponse_UPDATE,
+								Symbol: s,
+							})
+						return
+					} else {
+						unique.Store(s.Uuid,
+							&worker_symbol_service.RecalculateSymbolsResponse{
+								Type:   worker_symbol_service.RecalculateSymbolsResponse_IGNORE,
+								Symbol: s,
+							})
+						return
+					}
 				}
 			} else {
-				if unique[newSym.Uuid] == nil {
-					unique[newSym.Uuid] =
-						&worker_symbol_service.RecalculateSymbolsResponse{
-							Type:   worker_symbol_service.RecalculateSymbolsResponse_IGNORE,
-							Symbol: newSym,
-						}
-					continue
-				} else {
-					grpclog.Infoln("collision on ignore: ", newSym)
-					grpclog.Infoln("existing: ", unique[newSym.Uuid].Type, unique[newSym.Uuid])
-				}
+				grpclog.Infoln("collision while checking for CREATE , UPDATE OR IGNORE - existing:", mapValue)
+				grpclog.Infoln("new: ", s)
 			}
-		}
+		}(&wg, newSym)
 	}
 
 	// generate delete responses
 	for _, oldSym := range oldSymbols {
-		if ok, _ := common.ContainsSymbol(oldSym.Uuid, newSymbols); !ok {
-			if unique[oldSym.Uuid] == nil {
-				unique[oldSym.Uuid] = &worker_symbol_service.RecalculateSymbolsResponse{
-					Type:   worker_symbol_service.RecalculateSymbolsResponse_DELETE,
-					Symbol: oldSym,
+		go func(wg *sync.WaitGroup, s *proto_models.Symbol) {
+			wg.Add(1)
+			defer wg.Done()
+
+			mapValue, exists := unique.Load(s.Uuid)
+			if !exists {
+				if ok, _ := common.ContainsSymbol(s.Uuid, newSymbols); !ok {
+					unique.Store(s.Uuid,
+						&worker_symbol_service.RecalculateSymbolsResponse{
+							Type:   worker_symbol_service.RecalculateSymbolsResponse_DELETE,
+							Symbol: s,
+						})
+					return
 				}
 			} else {
-				grpclog.Infoln("collision: ", oldSym)
-				grpclog.Infoln("existing: ", unique[oldSym.Uuid].Type, unique[oldSym.Uuid])
+				grpclog.Infoln("collision while checking for DELETE - existing:", mapValue)
+				grpclog.Infoln("new: ", s)
 			}
-		}
+		}(&wg, oldSym)
 	}
 
+	wg.Wait()
+
 	var result []*worker_symbol_service.RecalculateSymbolsResponse
-	for _, v := range unique {
-		result = append(result, v)
-	}
+	unique.Range(func(k, v interface{}) bool {
+		result = append(result, v.(*worker_symbol_service.RecalculateSymbolsResponse))
+		return true
+	})
 
 	return result
 }
