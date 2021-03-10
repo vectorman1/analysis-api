@@ -49,7 +49,8 @@ func (s *UserService) Login(request *user_service.LoginRequest) (*user_service.L
 
 	expTime := time.Now().Add(24 * 60 * time.Minute)
 	claims := &model.Claims{
-		Uuid: u,
+		Uuid:        u,
+		PrivateRole: user.PrivateRole,
 		StandardClaims: jwt.StandardClaims{
 			Audience:  "analysis-web",
 			ExpiresAt: expTime.Unix(),
