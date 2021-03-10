@@ -76,7 +76,6 @@ func RunServer() error {
 
 func initializeServices(ctx context.Context, dbConnPool *pgx.ConnPool, config *common.Config) (*grpc_server.GRPCServer, error) {
 	symbolRepository := db.NewSymbolRepository(dbConnPool)
-	currencyRepository := db.NewCurrencyRepository(dbConnPool)
 	symbolOverviewRepository := db.NewSymbolOverviewRepository(dbConnPool)
 	userRepository := db.NewUserRepository(dbConnPool)
 	historicalRepository := db.NewHistoricalRepository(dbConnPool)
@@ -84,7 +83,7 @@ func initializeServices(ctx context.Context, dbConnPool *pgx.ConnPool, config *c
 	externalSymbolService := service.NewExternalSymbolService()
 	alphaVantageService := service.NewAlphaVantageService(config)
 
-	symbolsService := service.NewSymbolsService(symbolRepository, symbolOverviewRepository, currencyRepository, alphaVantageService, externalSymbolService)
+	symbolsService := service.NewSymbolsService(symbolRepository, symbolOverviewRepository, alphaVantageService, externalSymbolService)
 	userService := service.NewUserService(userRepository, config)
 	historicalService := service.NewHistoricalService(historicalRepository, symbolRepository)
 

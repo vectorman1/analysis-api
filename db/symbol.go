@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/pgtype"
+
 	"github.com/gofrs/uuid"
 
 	"github.com/vectorman1/analysis/analysis-api/model/db"
@@ -46,7 +48,6 @@ func (r *SymbolRepository) GetPaged(ctx *context.Context, req *symbol_service.Re
 		OrderBy(order).
 		Offset((req.Filter.PageNumber - 1) * req.Filter.PageSize).
 		Limit(req.Filter.PageSize).
-		Join("analysis.currencies AS c ON c.id = s.currency_id").
 		Where("deleted_at is NULL").
 		PlaceholderFormat(squirrel.Dollar)
 
@@ -74,11 +75,11 @@ func (r *SymbolRepository) GetPaged(ctx *context.Context, req *symbol_service.Re
 	var result []db.Symbol
 	var totalItems uint
 	for rows.Next() {
-		sym := db.Symbol{Currency: db.Currency{}}
+		sym := db.Symbol{}
 		if err = rows.Scan(
 			&sym.ID,
 			&sym.Uuid,
-			&sym.CurrencyID,
+			&sym.CurrencyCode,
 			&sym.Isin,
 			&sym.Identifier,
 			&sym.Name,
@@ -88,9 +89,6 @@ func (r *SymbolRepository) GetPaged(ctx *context.Context, req *symbol_service.Re
 			&sym.CreatedAt,
 			&sym.UpdatedAt,
 			&sym.DeletedAt,
-			&sym.Currency.ID,
-			&sym.Currency.Code,
-			&sym.Currency.LongName,
 			&totalItems); err != nil {
 			return nil, 0, err
 		}
@@ -108,8 +106,7 @@ func (r *SymbolRepository) GetByUuid(ctx *context.Context, symbolUuid string) (*
 
 	queryBuilder := squirrel.
 		Select("*").
-		From("analysis.symbols as s").
-		Join("analysis.currencies as c on s.currency_id = c.id").
+		From("analysis.symbols").
 		Where(fmt.Sprintf("uuid = '%s'", u.String())).
 		Limit(1)
 	query, _, err := queryBuilder.ToSql()
@@ -117,12 +114,12 @@ func (r *SymbolRepository) GetByUuid(ctx *context.Context, symbolUuid string) (*
 		return nil, err
 	}
 
-	sym := db.Symbol{Currency: db.Currency{}}
+	sym := db.Symbol{}
 	row := r.db.QueryRowEx(*ctx, query, &pgx.QueryExOptions{})
 	if err = row.Scan(
 		&sym.ID,
 		&sym.Uuid,
-		&sym.CurrencyID,
+		&sym.CurrencyCode,
 		&sym.Isin,
 		&sym.Identifier,
 		&sym.Name,
@@ -131,10 +128,7 @@ func (r *SymbolRepository) GetByUuid(ctx *context.Context, symbolUuid string) (*
 		&sym.MarketHoursGmt,
 		&sym.CreatedAt,
 		&sym.UpdatedAt,
-		&sym.DeletedAt,
-		&sym.Currency.ID,
-		&sym.Currency.Code,
-		&sym.Currency.LongName); err != nil {
+		&sym.DeletedAt); err != nil {
 		return nil, err
 	}
 
@@ -142,7 +136,7 @@ func (r *SymbolRepository) GetByUuid(ctx *context.Context, symbolUuid string) (*
 }
 
 // InsertBulk inserts the slice in a single transaction in batches and returns success and error
-func (r *SymbolRepository) InsertBulk(tx *pgx.Tx, timeoutContext *context.Context, symbols []*db.Symbol) (bool, error) {
+func (r *SymbolRepository) InsertBulk(tx *pgx.Tx, ctx *context.Context, symbols []*db.Symbol) (bool, error) {
 	// split inserts in batches
 	workList := make(chan []*db.Symbol)
 	go func() {
@@ -161,30 +155,32 @@ func (r *SymbolRepository) InsertBulk(tx *pgx.Tx, timeoutContext *context.Contex
 		}
 	}()
 
+	timestampTzNow := pgtype.Timestamptz{}
+	_ = timestampTzNow.Set(time.Now())
 	// generate query for insert from batches
 	for list := range workList {
 		q := squirrel.
 			Insert("analysis.symbols").
-			Columns("uuid, currency_id, isin, identifier, name, minimum_order_quantity, market_name, market_hours_gmt, created_at, updated_at, deleted_at").
+			Columns("uuid, currency_code, isin, identifier, name, minimum_order_quantity, market_name, market_hours_gmt, created_at, updated_at, deleted_at").
 			PlaceholderFormat(squirrel.Dollar)
 		for _, sym := range list {
 			q = q.Values(
 				&sym.Uuid,
-				&sym.CurrencyID,
+				&sym.CurrencyCode,
 				&sym.Isin,
 				&sym.Identifier,
 				&sym.Name,
 				&sym.MinimumOrderQuantity,
 				&sym.MarketName,
 				&sym.MarketHoursGmt,
-				&sym.CreatedAt,
-				&sym.UpdatedAt,
-				&sym.DeletedAt)
+				&timestampTzNow,
+				&timestampTzNow,
+				&pgtype.Timestamptz{Status: pgtype.Null})
 		}
 
 		query, args, _ := q.ToSql()
 		if len(args) > 0 {
-			_, err := tx.ExecEx(*timeoutContext, query, &pgx.QueryExOptions{}, args...)
+			_, err := tx.ExecEx(*ctx, query, &pgx.QueryExOptions{}, args...)
 			if err != nil {
 				return false, err
 			}
@@ -214,6 +210,8 @@ func (r *SymbolRepository) DeleteBulk(tx *pgx.Tx, timeoutContext *context.Contex
 		}
 	}()
 
+	deletedAt := pgtype.Timestamptz{}
+	_ = deletedAt.Set(time.Now())
 	// generate query for update from batches
 	for list := range workList {
 		for _, sym := range list {
@@ -223,7 +221,7 @@ func (r *SymbolRepository) DeleteBulk(tx *pgx.Tx, timeoutContext *context.Contex
 			q := squirrel.Update("analysis.symbols")
 
 			q = q.
-				Set("deleted_at", time.Now()).
+				Set("deleted_at", deletedAt).
 				PlaceholderFormat(squirrel.Dollar).
 				Where(squirrel.Eq{"uuid::text": u})
 
@@ -261,6 +259,8 @@ func (r *SymbolRepository) UpdateBulk(tx *pgx.Tx, ctx *context.Context, symbols 
 		}
 	}()
 
+	updatedAt := pgtype.Timestamptz{}
+	_ = updatedAt.Set(time.Now())
 	for list := range workList {
 		for _, sym := range list {
 			var u string
@@ -271,12 +271,9 @@ func (r *SymbolRepository) UpdateBulk(tx *pgx.Tx, ctx *context.Context, symbols 
 				PlaceholderFormat(squirrel.Dollar)
 
 			q = q.
-				Set("currency_id", sym.CurrencyID).
 				Set("name", sym.Name).
-				Set("minimum_order_quantity", sym.MinimumOrderQuantity.Float).
-				Set("market_name", sym.MarketName).
 				Set("market_hours_gmt", sym.MarketHoursGmt).
-				Set("updated_at", time.Now()).
+				Set("updated_at", updatedAt).
 				Where(squirrel.Eq{"uuid::text": u})
 
 			query, args, _ := q.ToSql()

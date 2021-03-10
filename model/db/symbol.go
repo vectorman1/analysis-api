@@ -1,16 +1,14 @@
 package db
 
 import (
-	"github.com/golang/protobuf/ptypes"
 	"github.com/jackc/pgx/pgtype"
 	"github.com/vectorman1/analysis/analysis-api/generated/proto_models"
 )
 
 type Symbol struct {
-	ID         uint        `json:"-"`
-	Uuid       pgtype.UUID `json:"uuid"`
-	CurrencyID uint        `json:"currency_id"`
-	Currency   Currency    `json:"-"`
+	ID           uint        `json:"-"`
+	Uuid         pgtype.UUID `json:"uuid"`
+	CurrencyCode string      `json:"currency_code"`
 
 	Isin                 string        `json:"isin"`
 	Identifier           string        `json:"identifier"`
@@ -24,25 +22,35 @@ type Symbol struct {
 	DeletedAt pgtype.Timestamptz `json:"deleted_at"`
 }
 
-func (s *Symbol) ToProtoObject() *proto_models.Symbol {
-	createdAt, _ := ptypes.TimestampProto(s.CreatedAt.Time)
-	updatedAt, _ := ptypes.TimestampProto(s.UpdatedAt.Time)
-	deletedAt, _ := ptypes.TimestampProto(s.DeletedAt.Time)
-	if s.DeletedAt.Status == pgtype.Null {
-		deletedAt = nil
+func (Symbol) FromProtoObject(sym *proto_models.Symbol) *Symbol {
+	moq := pgtype.Float4{}
+	moq.Set(sym.MinimumOrderQuantity)
+
+	u := pgtype.UUID{}
+	u.Set(sym.Uuid)
+
+	res := &Symbol{
+		Uuid:                 u,
+		CurrencyCode:         sym.CurrencyCode,
+		Isin:                 sym.Isin,
+		Identifier:           sym.Identifier,
+		Name:                 sym.Name,
+		MinimumOrderQuantity: moq,
+		MarketName:           sym.MarketName,
+		MarketHoursGmt:       sym.MarketHoursGmt,
 	}
 
+	return res
+}
+
+func (s *Symbol) ToProtoObject() *proto_models.Symbol {
 	// db constraint
 	var u string
 	s.Uuid.AssignTo(&u)
 
 	return &proto_models.Symbol{
-		Id: uint64(s.ID),
-		Currency: &proto_models.Currency{
-			Id:       uint64(s.Currency.ID),
-			Code:     s.Currency.Code,
-			LongName: s.Currency.LongName,
-		},
+		Id:                   uint64(s.ID),
+		CurrencyCode:         s.CurrencyCode,
 		Isin:                 s.Isin,
 		Uuid:                 u,
 		Identifier:           s.Identifier,
@@ -50,8 +58,5 @@ func (s *Symbol) ToProtoObject() *proto_models.Symbol {
 		MinimumOrderQuantity: s.MinimumOrderQuantity.Float,
 		MarketName:           s.MarketName,
 		MarketHoursGmt:       s.MarketHoursGmt,
-		CreatedAt:            createdAt,
-		UpdatedAt:            updatedAt,
-		DeletedAt:            deletedAt,
 	}
 }

@@ -123,13 +123,11 @@ func getSymbolData(row []string) (*proto_models.Symbol, error) {
 	us := u.String()
 
 	return &proto_models.Symbol{
-		Uuid:       us,
-		Isin:       isin,
-		Identifier: instrumentName,
-		Name:       companyName,
-		Currency: &proto_models.Currency{
-			Code: currencyCode,
-		},
+		Uuid:                 us,
+		Isin:                 isin,
+		Identifier:           instrumentName,
+		Name:                 companyName,
+		CurrencyCode:         currencyCode,
 		MinimumOrderQuantity: roundedMinQuantity,
 		MarketName:           marketName,
 		MarketHoursGmt:       marketHours,

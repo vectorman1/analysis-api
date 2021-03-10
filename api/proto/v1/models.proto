@@ -6,27 +6,21 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/vectorman1/analysis/analysis-api/generated/proto_models";
 
-message Currency {
-  uint64 id = 1;
-  string code = 2;
-  string longName = 3;
-}
-
 message Symbol {
   uint64 id = 1;
   string uuid = 2;
-  Currency currency = 3;
+  string currency_code = 3;
 
   string isin = 5;
   string identifier = 6;
   string name = 7;
-  float minimumOrderQuantity = 8;
-  string marketName = 9;
-  string marketHoursGmt = 10;
+  float minimum_order_quantity = 8;
+  string market_name = 9;
+  string market_hours_gmt = 10;
 
-  google.protobuf.Timestamp createdAt = 11;
-  google.protobuf.Timestamp updatedAt = 12;
-  google.protobuf.Timestamp deletedAt = 13;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+  google.protobuf.Timestamp deleted_at = 13;
 }
 
 message Symbols {

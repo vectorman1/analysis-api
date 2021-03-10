@@ -37,7 +37,6 @@ type symbolsService interface {
 
 type SymbolsService struct {
 	symbolsService
-	currencyRepository       *db.CurrencyRepository
 	symbolsRepository        *db.SymbolRepository
 	symbolOverviewRepository *db.SymbolOverviewRepository
 	alphaVantageService      *AlphaVantageService
@@ -47,13 +46,11 @@ type SymbolsService struct {
 func NewSymbolsService(
 	symbolsRepository *db.SymbolRepository,
 	symbolOverviewRepository *db.SymbolOverviewRepository,
-	currencyRepository *db.CurrencyRepository,
 	alphaVantageService *AlphaVantageService,
 	externalSymbolService *ExternalSymbolService) *SymbolsService {
 	return &SymbolsService{
 		symbolsRepository:        symbolsRepository,
 		symbolOverviewRepository: symbolOverviewRepository,
-		currencyRepository:       currencyRepository,
 		alphaVantageService:      alphaVantageService,
 		externalSymbolService:    externalSymbolService,
 	}

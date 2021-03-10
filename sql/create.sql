@@ -18,18 +18,11 @@ GRANT ALL PRIVILEGES ON DATABASE analysis TO harb;
 GRANT ALL PRIVILEGES ON SCHEMA analysis TO harb;
 GRANT ALL PRIVILEGES ON SCHEMA "user" TO harb;
 
-CREATE TABLE IF NOT EXISTS analysis.currencies
-(
-    id SERIAL PRIMARY KEY,
-    code TEXT UNIQUE NOT NULL,
-    long_name TEXT NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS analysis.symbols
 (
     id SERIAL PRIMARY KEY,
     uuid uuid UNIQUE NOT NULL,
-    currency_id BIGINT NOT NULL,
+    currency_code TEXT NOT NULL,
     isin TEXT NOT NULL,
     identifier TEXT NOT NULL,
     name TEXT NOT NULL,
@@ -38,9 +31,8 @@ CREATE TABLE IF NOT EXISTS analysis.symbols
     market_hours_gmt TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    deleted_at TIMESTAMPTZ NULL DEFAULT NULL,
-    CONSTRAINT fk_symbols_currency FOREIGN KEY (currency_id) REFERENCES analysis.currencies (id) ON UPDATE NO ACTION ON DELETE NO ACTION
-    );
+    deleted_at TIMESTAMPTZ NULL DEFAULT NULL
+);
 
 CREATE TABLE IF NOT EXISTS analysis.histories
 (
