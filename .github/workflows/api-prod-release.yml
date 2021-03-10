@@ -34,13 +34,8 @@ jobs:
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
 
-      - name: Send update webhook to swarm
-        uses: zzzze/webhook-trigger@master
-        with:
-          webhook_url: ${{ secrets.DEPLOY_WEBHOOK }}
-
       - uses: actions/setup-ruby@v1
-      - name: Send status started failed
+      - name: Send build status
         if: ${{ always() }}
         env:
           JOB_STATUS: ${{ job.status }}
@@ -51,3 +46,12 @@ jobs:
           git clone https://github.com/DiscordHooks/github-actions-discord-webhook.git webhook
           bash webhook/send.sh $JOB_STATUS $DISCORD_WEBHOOK_URL
         shell: bash
+
+  notify_swarm:
+    name: Notify Docker Swarm to update services
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send update webhook to swarm
+        uses: zzzze/webhook-trigger@master
+        with:
+          webhook_url: ${{ secrets.DEPLOY_WEBHOOK }}
