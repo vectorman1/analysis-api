@@ -44,12 +44,15 @@ func RunServer(ctx context.Context, grpcPort, httpPort string) error {
 	}
 
 	// configure CORS headers options
-	corsH := cors_rest.GetCORS()
+	verifyCors := cors_rest.GetCORS()
 
 	srv := &http.Server{
 		Addr: "0.0.0.0:" + httpPort,
-		Handler: corsH(tracer_rest.AddRequestID(
-			logger_rest.AddLogger(logger_grpc.Log, mux))),
+		Handler: cors_rest.PassCors(
+			verifyCors(
+				tracer_rest.AddRequestID(
+					logger_rest.AddLogger(
+						logger_grpc.Log, mux)))),
 	}
 
 	// graceful shutdown
