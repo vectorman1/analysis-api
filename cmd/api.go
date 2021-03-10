@@ -68,7 +68,7 @@ func RunServer() error {
 
 	// run HTTP gateway
 	go func() {
-		_ = rest_server.RunServer(ctx, config.GRPCPort, config.HTTPPort)
+		_ = rest_server.RunServer(ctx, config)
 	}()
 
 	return s.Run()
