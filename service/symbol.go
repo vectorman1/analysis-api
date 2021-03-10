@@ -99,37 +99,6 @@ func (s *SymbolsService) Details(ctx *context.Context, req *symbol_service.Symbo
 	}, nil
 }
 
-func (s *SymbolsService) InsertBulk(timeoutContext context.Context, symbols []*proto_models.Symbol) (bool, error) {
-	entities, err := s.symbolDataToEntity(&symbols)
-	if err != nil {
-		return false, err
-	}
-
-	// begin a transaction for the whole of the insert
-	tx, err := s.symbolsRepository.BeginTx(&timeoutContext, &pgx.TxOptions{})
-	if err != nil {
-		return false, err
-	}
-
-	// insert items in batches
-	_, err = s.symbolsRepository.InsertBulk(tx, &timeoutContext, entities)
-	if err != nil {
-		err2 := tx.RollbackEx(timeoutContext)
-		if err2 != nil {
-			return false, fmt.Errorf("%v %v", err, err2)
-		}
-		return false, err
-	}
-
-	// commit insertion
-	err = tx.CommitEx(timeoutContext)
-	if err != nil {
-		return false, err
-	}
-
-	return true, nil
-}
-
 func (s *SymbolsService) Recalculate(ctx *context.Context) (*symbol_service.RecalculateSymbolResponse, error) {
 	oldSymbols, _, err := s.GetPaged(ctx, &symbol_service.ReadPagedSymbolRequest{
 		Filter: &symbol_service.SymbolFilter{
