@@ -25,8 +25,9 @@ type symbolsService interface {
 	// repo methods
 	GetPaged(ctx *context.Context, req *symbol_service.ReadPagedSymbolRequest) (*[]*proto_models.Symbol, uint, error)
 	Details(ctx *context.Context, req *symbol_service.SymbolDetailsRequest) (*symbol_service.SymbolDetailsResponse, error)
-	InsertBulk(ctx *context.Context, symbols []*proto_models.Symbol) (bool, error)
+
 	// service methods
+	Recalculate(ctx *context.Context) (*symbol_service.RecalculateSymbolResponse, error)
 	processRecalculationResponse(
 		input []*worker_symbol_service.RecalculateSymbolsResponse,
 		ctx *context.Context) (*symbol_service.RecalculateSymbolResponse, error)

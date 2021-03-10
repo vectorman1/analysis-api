@@ -44,7 +44,7 @@ func (r *SymbolRepository) GetPaged(ctx *context.Context, req *symbol_service.Re
 	order := common.FormatOrderQuery(req.Filter.Order, req.Filter.Ascending)
 	queryBuilder := squirrel.
 		Select("*, count(*) OVER() AS total_count").
-		From("analysis.symbols as s").
+		From("analysis.symbols").
 		OrderBy(order).
 		Offset((req.Filter.PageNumber - 1) * req.Filter.PageSize).
 		Limit(req.Filter.PageSize).
