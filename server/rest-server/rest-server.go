@@ -7,8 +7,6 @@ import (
 
 	"github.com/vectorman1/analysis/analysis-api/generated/user_service"
 
-	cors_rest "github.com/vectorman1/analysis/analysis-api/middleware/cors-rest"
-
 	logger_rest "github.com/vectorman1/analysis/analysis-api/middleware/logger-rest"
 
 	"log"
@@ -43,12 +41,9 @@ func RunServer(ctx context.Context, grpcPort, httpPort string) error {
 		logger_grpc.Log.Fatal("failed to start HTTP gateway", zap.String("reason", err.Error()))
 	}
 
-	// configure CORS headers options
-	addCors := cors_rest.GetCORS()
-
 	srv := &http.Server{
 		Addr:    "0.0.0.0:" + httpPort,
-		Handler: tracer_rest.AddRequestID(logger_rest.AddLogger(logger_grpc.Log, addCors(mux))),
+		Handler: tracer_rest.AddRequestID(logger_rest.AddLogger(logger_grpc.Log, mux)),
 	}
 
 	// graceful shutdown
