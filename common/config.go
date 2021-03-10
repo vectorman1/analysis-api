@@ -23,6 +23,9 @@ type Config struct {
 	// JWT secret for signing user tokens
 	JwtSigningSecret string `json:"jwt_signing_secret"`
 
+	// Allowed origins for CORS policy
+	AllowedOrigin string `json:"allowed_origin"`
+
 	// gRPC grpc-server start parameters section
 	// gRPC is TCP port to listen by gRPC grpc-server
 	GRPCPort string `json:"grpc_port"`
