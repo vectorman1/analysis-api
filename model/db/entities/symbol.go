@@ -1,4 +1,4 @@
-package pgsql
+package entities
 
 import (
 	"github.com/golang/protobuf/ptypes"

@@ -1,4 +1,4 @@
-package pgsql
+package entities
 
 type TriggerType uint
 type SourceValueType uint

@@ -1,8 +1,8 @@
-package mongo
+package documents
 
 import (
 	"github.com/jackc/pgx/pgtype"
-	"github.com/vectorman1/analysis/analysis-api/model/db/pgsql"
+	"github.com/vectorman1/analysis/analysis-api/model/db/entities"
 )
 
 type EMA struct {
@@ -15,9 +15,9 @@ type MACD struct {
 }
 
 type Report struct {
-	ID       uint         `json:"id"`
-	SymbolID uint         `json:"symbol_id"`
-	Symbol   pgsql.Symbol `json:"-"`
+	ID       uint            `json:"id"`
+	SymbolID uint            `json:"symbol_id"`
+	Symbol   entities.Symbol `json:"-"`
 
 	ExponentialMovingAverages pgtype.Float4Array `json:"exponential_moving_averages"`
 	SimpleMovingAverages      pgtype.Float4Array `json:"simple_moving_averages"`
