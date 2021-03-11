@@ -44,9 +44,17 @@ func RunServer(ctx context.Context, config *common.Config) error {
 		logger_grpc.Log.Fatal("failed to start HTTP gateway", zap.String("reason", err.Error()))
 	}
 
-	srv := &http.Server{
-		Addr:    "0.0.0.0:" + config.HTTPPort,
-		Handler: tracer_rest.AddRequestID(logger_rest.AddLogger(logger_grpc.Log, allowCORS(mux, config.AllowedOrigin))),
+	srv := &http.Server{}
+	if config.AllowedOrigin == "*" {
+		srv = &http.Server{
+			Addr:    "0.0.0.0:" + config.HTTPPort,
+			Handler: tracer_rest.AddRequestID(logger_rest.AddLogger(logger_grpc.Log, allowCORS(mux, config.AllowedOrigin))),
+		}
+	} else {
+		srv = &http.Server{
+			Addr:    "0.0.0.0:" + config.HTTPPort,
+			Handler: tracer_rest.AddRequestID(logger_rest.AddLogger(logger_grpc.Log, mux)),
+		}
 	}
 
 	// graceful shutdown
