@@ -94,7 +94,7 @@ func (s *SymbolService) Details(ctx context.Context, req *symbol_service.SymbolD
 
 	overview, err := s.symbolOverviewRepository.GetBySymbolUuid(ctx, req.Uuid)
 	if err != nil {
-		extOverview, err := s.alphaVantageService.GetOrUpdateSymbolOverview(symbol.Identifier)
+		extOverview, err := s.alphaVantageService.GetSymbolOverview(symbol.Identifier)
 		if err != nil {
 			return nil, err
 		}
@@ -104,10 +104,12 @@ func (s *SymbolService) Details(ctx context.Context, req *symbol_service.SymbolD
 			return nil, err
 		}
 
-		overview, err = s.symbolOverviewRepository.GetBySymbolUuid(ctx, req.Uuid)
+		newOverview, err := s.symbolOverviewRepository.GetBySymbolUuid(ctx, req.Uuid)
 		if err != nil {
 			return nil, err
 		}
+
+		overview = newOverview
 	}
 
 	return &symbol_service.SymbolDetailsResponse{
