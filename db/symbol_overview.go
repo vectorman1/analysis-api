@@ -9,8 +9,6 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-
-	"github.com/jackc/pgx"
 )
 
 type symbolOverviewRepository interface {
@@ -20,13 +18,11 @@ type symbolOverviewRepository interface {
 
 type SymbolOverviewRepository struct {
 	symbolOverviewRepository
-	pgdb    *pgx.ConnPool
 	mondodb *mongo.Database
 }
 
-func NewSymbolOverviewRepository(pgdb *pgx.ConnPool, mongodb *mongo.Database) *SymbolOverviewRepository {
+func NewSymbolOverviewRepository(mongodb *mongo.Database) *SymbolOverviewRepository {
 	return &SymbolOverviewRepository{
-		pgdb:    pgdb,
 		mondodb: mongodb,
 	}
 }
