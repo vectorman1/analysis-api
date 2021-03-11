@@ -98,7 +98,7 @@ func (s *SymbolsService) Details(ctx *context.Context, req *symbol_service.Symbo
 	}, nil
 }
 
-func (s *SymbolsService) Recalculate(ctx *context.Context) (*symbol_service.RecalculateSymbolResponse, error) {
+func (s *SymbolsService) Recalculate(ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error) {
 	oldSymbols, _, err := s.GetPaged(ctx, &symbol_service.ReadPagedSymbolRequest{
 		Filter: &symbol_service.SymbolFilter{
 			PageSize:   100000,
@@ -127,7 +127,7 @@ func (s *SymbolsService) Recalculate(ctx *context.Context) (*symbol_service.Reca
 
 func (s *SymbolsService) processRecalculationResponse(
 	input []*worker_symbol_service.RecalculateSymbolsResponse,
-	ctx *context.Context) (*symbol_service.RecalculateSymbolResponse, error) {
+	ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error) {
 
 	var createSymbols []*proto_models.Symbol
 	var updateSymbols []*proto_models.Symbol
@@ -147,9 +147,7 @@ func (s *SymbolsService) processRecalculationResponse(
 		}
 	}
 
-	fmt.Println("starting save of update")
-
-	timeoutContext, c := context.WithTimeout(*ctx, 10*time.Second)
+	timeoutContext, c := context.WithTimeout(ctx, 10*time.Second)
 	defer c()
 
 	tx, err := s.symbolsRepository.BeginTx(&timeoutContext, &pgx.TxOptions{})
@@ -157,7 +155,6 @@ func (s *SymbolsService) processRecalculationResponse(
 		return nil, err
 	}
 
-	fmt.Println("getting symbols from protos")
 	// create new symbols
 	createEntities, err := s.symbolDataToEntity(&createSymbols)
 	if err != nil {
@@ -165,40 +162,36 @@ func (s *SymbolsService) processRecalculationResponse(
 		return nil, err
 	}
 
-	fmt.Println("inserting new symbols")
-	_, err = s.symbolsRepository.InsertBulk(tx, &timeoutContext, createEntities)
+	_, err = s.symbolsRepository.InsertBulk(tx, timeoutContext, createEntities)
 	if err != nil {
 		tx.RollbackEx(timeoutContext)
 		return nil, err
 	}
 
-	fmt.Println("deleting old symbols")
 	// delete entities
 	deleteEntities, err := s.symbolDataToEntity(&deleteSymbols)
 	if err != nil {
 		tx.RollbackEx(timeoutContext)
 		return nil, err
 	}
-	_, err = s.symbolsRepository.DeleteBulk(tx, &timeoutContext, deleteEntities)
+	_, err = s.symbolsRepository.DeleteBulk(tx, timeoutContext, deleteEntities)
 	if err != nil {
 		tx.RollbackEx(timeoutContext)
 		return nil, err
 	}
 
-	fmt.Println("updating old symbols")
 	// update entities
 	updateEntities, err := s.symbolDataToEntity(&updateSymbols)
 	if err != nil {
 		tx.RollbackEx(timeoutContext)
 		return nil, err
 	}
-	_, err = s.symbolsRepository.UpdateBulk(tx, &timeoutContext, updateEntities)
+	_, err = s.symbolsRepository.UpdateBulk(tx, timeoutContext, updateEntities)
 	if err != nil {
 		tx.RollbackEx(timeoutContext)
 		return nil, err
 	}
 
-	fmt.Println("saving")
 	err = tx.CommitEx(timeoutContext)
 	if err != nil {
 		return nil, err
@@ -213,11 +206,11 @@ func (s *SymbolsService) processRecalculationResponse(
 	}, nil
 }
 
-func (s *SymbolsService) symbolDataToEntity(in *[]*proto_models.Symbol) ([]*db2.Symbol, error) {
-	var result []*db2.Symbol
+func (s *SymbolsService) symbolDataToEntity(in *[]*proto_models.Symbol) ([]*entities.Symbol, error) {
+	var result []*entities.Symbol
 
 	for _, sym := range *in {
-		result = append(result, db2.Symbol{}.FromProtoObject(sym))
+		result = append(result, entities.Symbol{}.FromProtoObject(sym))
 	}
 
 	return result, nil
