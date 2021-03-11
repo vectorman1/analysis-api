@@ -1,70 +1,75 @@
-package db
+package documents
 
 import (
+	"time"
+
 	"github.com/golang/protobuf/ptypes"
-	"github.com/jackc/pgx/pgtype"
 	"github.com/vectorman1/analysis/analysis-api/generated/symbol_service"
 )
 
 type SymbolOverview struct {
-	SymbolUuid                 pgtype.UUID
+	SymbolUuid                 string
 	Description                string
 	Country                    string
 	Sector                     string
 	Industry                   string
 	Address                    string
-	FullTimeEmployees          string
+	FullTimeEmployees          int64
 	FiscalYearEnd              string
-	LatestQuarter              string
-	MarketCapitalization       string
-	EBITDA                     string
-	PERatio                    string
-	PEGRatio                   string
-	BookValue                  string
-	DividendPerShare           string
-	DividendYield              string
-	EPS                        string
-	RevenuePerShareTTM         string
-	ProfitMargin               string
-	OperatingMarginTTM         string
-	ReturnOnAssetsTTM          string
-	ReturnOnEquityTTM          string
-	RevenueTTM                 string
-	GrossProfitTTM             string
-	DilutedEPSTTM              string
-	QuarterlyEarningsGrowthYOY string
-	QuarterlyRevenueGrowthYOY  string
-	AnalystTargetPrice         string
-	TrailingPE                 string
-	ForwardPE                  string
-	PriceToSalesRatioTTM       string
-	PriceToBookRatio           string
-	EVToRevenue                string
-	EVToEBITDA                 string
-	Beta                       string
-	WeekHigh52                 string
-	WeekLow52                  string
-	SharesOutstanding          string
-	SharesFloat                string
-	SharesShort                string
-	SharesShortPriorMonth      string
-	ShortRatio                 string
-	ShortPercentOutstanding    string
-	ShortPercentFloat          string
-	PercentInsiders            string
-	PercentInstitutions        string
-	ForwardAnnualDividendRate  string
-	ForwardAnnualDividendYield string
-	PayoutRatio                string
-	DividendDate               string
-	ExDividendDate             string
+	LatestQuarter              time.Time
+	MarketCapitalization       int64
+	EBITDA                     int64
+	PERatio                    float32
+	PEGRatio                   float32
+	BookValue                  float32
+	DividendPerShare           float32
+	DividendYield              float32
+	EPS                        float32
+	RevenuePerShareTTM         float32
+	ProfitMargin               float32
+	OperatingMarginTTM         float32
+	ReturnOnAssetsTTM          float32
+	ReturnOnEquityTTM          float32
+	RevenueTTM                 int64
+	GrossProfitTTM             int64
+	DilutedEPSTTM              float32
+	QuarterlyEarningsGrowthYOY float32
+	QuarterlyRevenueGrowthYOY  float32
+	AnalystTargetPrice         float32
+	TrailingPE                 float32
+	ForwardPE                  float32
+	PriceToSalesRatioTTM       float32
+	PriceToBookRatio           float32
+	EVToRevenue                float32
+	EVToEBITDA                 float32
+	Beta                       float32
+	WeekHigh52                 float32
+	WeekLow52                  float32
+	SharesOutstanding          int64
+	SharesFloat                int64
+	SharesShort                int64
+	SharesShortPriorMonth      int64
+	ShortRatio                 float32
+	ShortPercentOutstanding    float32
+	ShortPercentFloat          float32
+	PercentInsiders            float32
+	PercentInstitutions        float32
+	ForwardAnnualDividendRate  float32
+	ForwardAnnualDividendYield float32
+	PayoutRatio                float32
+	DividendDate               time.Time
+	ExDividendDate             time.Time
 	LastSplitFactor            string
-	LastSplitDate              string
-	UpdatedAt                  pgtype.Timestamptz
+	LastSplitDate              time.Time
+	UpdatedAt                  time.Time
 }
 
-func (s *SymbolOverview) ToProtoObject() *symbol_service.SymbolOverview {
-	updatedAt, _ := ptypes.TimestampProto(s.UpdatedAt.Time)
+func (s *SymbolOverview) ToProto() *symbol_service.SymbolOverview {
+	latestQuarter, _ := ptypes.TimestampProto(s.LatestQuarter)
+	updatedAt, _ := ptypes.TimestampProto(s.UpdatedAt)
+	dividendDate, _ := ptypes.TimestampProto(s.DividendDate)
+	exDividendDate, _ := ptypes.TimestampProto(s.ExDividendDate)
+	lastSplitDate, _ := ptypes.TimestampProto(s.DividendDate)
 
 	return &symbol_service.SymbolOverview{
 		Description:                s.Description,
@@ -74,7 +79,7 @@ func (s *SymbolOverview) ToProtoObject() *symbol_service.SymbolOverview {
 		Address:                    s.Address,
 		FullTimeEmployees:          s.FullTimeEmployees,
 		FiscalYearEnd:              s.FiscalYearEnd,
-		LatestQuarter:              s.LatestQuarter,
+		LatestQuarter:              latestQuarter,
 		MarketCapitalization:       s.MarketCapitalization,
 		Ebitda:                     s.EBITDA,
 		PeRatio:                    s.PERatio,
@@ -115,10 +120,10 @@ func (s *SymbolOverview) ToProtoObject() *symbol_service.SymbolOverview {
 		ForwardAnnualDividendRate:  s.ForwardAnnualDividendRate,
 		ForwardAnnualDividendYield: s.ForwardAnnualDividendYield,
 		PayoutRatio:                s.PayoutRatio,
-		DividendDate:               s.DividendDate,
-		ExDividendDate:             s.ExDividendDate,
+		DividendDate:               dividendDate,
+		ExDividendDate:             exDividendDate,
 		LastSplitFactor:            s.LastSplitFactor,
-		LastSplitDate:              s.LastSplitDate,
+		LastSplitDate:              lastSplitDate,
 		UpdatedAt:                  updatedAt,
 	}
 }

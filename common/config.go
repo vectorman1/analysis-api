@@ -16,6 +16,21 @@ const (
 	Production
 )
 
+type postgreSQLConfig struct {
+	// DB Datastore parameters section
+	// DatastoreDBHost is host of database
+	DatastoreDBHost string `json:"datastore_db_host"`
+	// DatastoreDBUser is username to connect to database
+	DatastoreDBUser string `json:"datastore_db_user"`
+	// DatastoreDBPassword password to connect to database
+	DatastoreDBPassword string `json:"datastore_db_password"`
+	// DatastoreDBSchema is schema of database
+	DatastoreDBSchema string `json:"datastore_db_schema"`
+
+	// DatabaseMaxConnections is the maximum amount of connection pool connections to the database
+	DatabaseMaxConnections int `json:"database_max_connections"`
+}
+
 type Config struct {
 	// Alpha Vantage API Key
 	AlphaVantageApiKey string `json:"alpha_vantage_api_key"`
@@ -34,18 +49,8 @@ type Config struct {
 	// HTTPPort is TCP port to listen by HTTP/REST gateway
 	HTTPPort string `json:"http_port"`
 
-	// DB Datastore parameters section
-	// DatastoreDBHost is host of database
-	DatastoreDBHost string `json:"datastore_db_host"`
-	// DatastoreDBUser is username to connect to database
-	DatastoreDBUser string `json:"datastore_db_user"`
-	// DatastoreDBPassword password to connect to database
-	DatastoreDBPassword string `json:"datastore_db_password"`
-	// DatastoreDBSchema is schema of database
-	DatastoreDBSchema string `json:"datastore_db_schema"`
-
-	// DatabaseMaxConnections is the maximum amount of connection pool connections to the database
-	DatabaseMaxConnections int `json:"database_max_connections"`
+	MongoDbConnString string           `json:"mongo_db_conn_string"`
+	PostgreSQLConfig  postgreSQLConfig `json:"postgre_sql_config"`
 
 	// Log parameters section
 	// LogLevel is global log level: Debug(-1), Info(0), Warn(1), Error(2), DPanic(3), Panic(4), Fatal(5)
@@ -54,7 +59,8 @@ type Config struct {
 	LogTimeFormat string `json:"log_time_format"`
 }
 
-func GetConfig() (*Config, error) {
+// GetConfig retrieves the app's configuration from the Saruman Service
+func GetConfig() (*Config, error) { // TODO: extract to saruman infra service
 	grpclog.Infoln("Getting configuration from Saruman...")
 
 	client := &http.Client{}

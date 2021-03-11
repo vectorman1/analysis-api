@@ -1,4 +1,4 @@
-package db
+package entities
 
 type TriggerType uint
 type SourceValueType uint

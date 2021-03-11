@@ -1,10 +1,10 @@
 package service
 
 import (
+	"strconv"
 	"time"
 
-	"github.com/jackc/pgx/pgtype"
-	dbmodel "github.com/vectorman1/analysis/analysis-api/model/db"
+	"github.com/vectorman1/analysis/analysis-api/model/db/documents"
 )
 
 type SymbolOverview struct {
@@ -69,67 +69,107 @@ type SymbolOverview struct {
 	LastSplitDate              string `json:"LastSplitDate"`
 }
 
-func (s *SymbolOverview) ToEntity(uuid string) *dbmodel.SymbolOverview {
-	var u pgtype.UUID
-	u.Set(uuid)
+func (s *SymbolOverview) ToEntity(uuid string) *documents.SymbolOverview {
+	fullTimeEmployees, _ := strconv.ParseInt(s.FullTimeEmployees, 10, 64)
+	latestQuarter, _ := time.Parse("2006-01-02", s.LatestQuarter)
+	marketCapitalization, _ := strconv.ParseInt(s.MarketCapitalization, 10, 64)
+	ebitda, _ := strconv.ParseInt(s.EBITDA, 10, 64)
+	peRatio, _ := strconv.ParseFloat(s.PERatio, 32)
+	pegRatio, _ := strconv.ParseFloat(s.PEGRatio, 32)
+	bookValue, _ := strconv.ParseFloat(s.PERatio, 32)
+	dividendPerShare, _ := strconv.ParseFloat(s.PERatio, 32)
+	dividendYield, _ := strconv.ParseFloat(s.PERatio, 32)
+	revenuePerShareTTM, _ := strconv.ParseFloat(s.RevenuePerShareTTM, 32)
+	profitMargin, _ := strconv.ParseFloat(s.ProfitMargin, 32)
+	operatingMarginTTM, _ := strconv.ParseFloat(s.OperatingMarginTTM, 32)
+	returnOnAssetsTTM, _ := strconv.ParseFloat(s.ReturnOnAssetsTTM, 32)
+	eps, _ := strconv.ParseFloat(s.EPS, 32)
+	returnOnEquityTTM, _ := strconv.ParseFloat(s.ReturnOnEquityTTM, 32)
+	revenueTTM, _ := strconv.ParseInt(s.RevenueTTM, 10, 64)
+	grossProfitTTM, _ := strconv.ParseInt(s.GrossProfitTTM, 10, 64)
+	dilutedEPSTTM, _ := strconv.ParseFloat(s.DilutedEPSTTM, 32)
+	quarterlyEarningsGrowthYOY, _ := strconv.ParseFloat(s.QuarterlyEarningsGrowthYOY, 32)
+	quarterlyRevenueGrowthYOY, _ := strconv.ParseFloat(s.QuarterlyRevenueGrowthYOY, 32)
+	analystTargetPrice, _ := strconv.ParseFloat(s.AnalystTargetPrice, 32)
+	trailingPE, _ := strconv.ParseFloat(s.TrailingPE, 32)
+	forwardPE, _ := strconv.ParseFloat(s.ForwardPE, 32)
+	priceToSalesRatioTTM, _ := strconv.ParseFloat(s.PriceToSalesRatioTTM, 32)
+	priceToBookRatio, _ := strconv.ParseFloat(s.PriceToBookRatio, 32)
+	eVToRevenue, _ := strconv.ParseFloat(s.EVToRevenue, 32)
+	eVToEBITDA, _ := strconv.ParseFloat(s.EVToEBITDA, 32)
+	beta, _ := strconv.ParseFloat(s.Beta, 32)
+	weekHigh52, _ := strconv.ParseFloat(s.WeekHigh52, 32)
+	weekLow52, _ := strconv.ParseFloat(s.WeekLow52, 32)
+	sharesOutstanding, _ := strconv.ParseInt(s.SharesOutstanding, 10, 32)
+	sharesFloat, _ := strconv.ParseInt(s.SharesFloat, 10, 32)
+	sharesShort, _ := strconv.ParseInt(s.SharesShort, 10, 32)
+	sharesShortPriorMonth, _ := strconv.ParseInt(s.SharesShortPriorMonth, 10, 32)
+	shortRatio, _ := strconv.ParseFloat(s.ShortRatio, 32)
+	shortPercentOutstanding, _ := strconv.ParseFloat(s.ShortPercentOutstanding, 32)
+	shortPercentFloat, _ := strconv.ParseFloat(s.ShortPercentFloat, 32)
+	percentInsiders, _ := strconv.ParseFloat(s.PercentInsiders, 32)
+	percentInstitutions, _ := strconv.ParseFloat(s.PercentInstitutions, 32)
+	forwardAnnualDividendRate, _ := strconv.ParseFloat(s.ForwardAnnualDividendRate, 32)
+	forwardAnnualDividendYield, _ := strconv.ParseFloat(s.ForwardAnnualDividendYield, 32)
+	payoutRatio, _ := strconv.ParseFloat(s.PayoutRatio, 32)
+	dividendDate, _ := time.Parse("2006-01-02", s.DividendDate)
+	exDividendDate, _ := time.Parse("2006-01-02", s.ExDividendDate)
+	lastSplitDate, _ := time.Parse("2006-01-02", s.LastSplitDate)
 
-	return &dbmodel.SymbolOverview{
-		SymbolUuid:                 u,
+	return &documents.SymbolOverview{
+		SymbolUuid:                 uuid,
 		Description:                s.Description,
 		Country:                    s.Country,
 		Sector:                     s.Sector,
 		Industry:                   s.Industry,
 		Address:                    s.Address,
-		FullTimeEmployees:          s.FullTimeEmployees,
+		FullTimeEmployees:          fullTimeEmployees,
 		FiscalYearEnd:              s.FiscalYearEnd,
-		LatestQuarter:              s.LatestQuarter,
-		MarketCapitalization:       s.MarketCapitalization,
-		EBITDA:                     s.EBITDA,
-		PERatio:                    s.PERatio,
-		PEGRatio:                   s.PEGRatio,
-		BookValue:                  s.BookValue,
-		DividendPerShare:           s.DividendPerShare,
-		DividendYield:              s.DividendYield,
-		EPS:                        s.EPS,
-		RevenuePerShareTTM:         s.RevenuePerShareTTM,
-		ProfitMargin:               s.ProfitMargin,
-		OperatingMarginTTM:         s.OperatingMarginTTM,
-		ReturnOnAssetsTTM:          s.ReturnOnAssetsTTM,
-		ReturnOnEquityTTM:          s.ReturnOnEquityTTM,
-		RevenueTTM:                 s.RevenueTTM,
-		GrossProfitTTM:             s.GrossProfitTTM,
-		DilutedEPSTTM:              s.DilutedEPSTTM,
-		QuarterlyEarningsGrowthYOY: s.QuarterlyEarningsGrowthYOY,
-		QuarterlyRevenueGrowthYOY:  s.QuarterlyRevenueGrowthYOY,
-		AnalystTargetPrice:         s.AnalystTargetPrice,
-		TrailingPE:                 s.TrailingPE,
-		ForwardPE:                  s.ForwardPE,
-		PriceToSalesRatioTTM:       s.PriceToSalesRatioTTM,
-		PriceToBookRatio:           s.PriceToBookRatio,
-		EVToRevenue:                s.EVToRevenue,
-		EVToEBITDA:                 s.EVToEBITDA,
-		Beta:                       s.Beta,
-		WeekHigh52:                 s.WeekLow52,
-		WeekLow52:                  s.WeekLow52,
-		SharesOutstanding:          s.SharesOutstanding,
-		SharesFloat:                s.SharesFloat,
-		SharesShort:                s.SharesShort,
-		SharesShortPriorMonth:      s.SharesShortPriorMonth,
-		ShortRatio:                 s.ShortRatio,
-		ShortPercentOutstanding:    s.ShortPercentOutstanding,
-		ShortPercentFloat:          s.ShortPercentFloat,
-		PercentInsiders:            s.PercentInsiders,
-		PercentInstitutions:        s.PercentInstitutions,
-		ForwardAnnualDividendRate:  s.ForwardAnnualDividendRate,
-		ForwardAnnualDividendYield: s.ForwardAnnualDividendYield,
-		PayoutRatio:                s.PayoutRatio,
-		DividendDate:               s.DividendDate,
-		ExDividendDate:             s.ExDividendDate,
+		LatestQuarter:              latestQuarter,
+		MarketCapitalization:       marketCapitalization,
+		EBITDA:                     ebitda,
+		PERatio:                    float32(peRatio),
+		PEGRatio:                   float32(pegRatio),
+		BookValue:                  float32(bookValue),
+		DividendPerShare:           float32(dividendPerShare),
+		DividendYield:              float32(dividendYield),
+		EPS:                        float32(eps),
+		RevenuePerShareTTM:         float32(revenuePerShareTTM),
+		ProfitMargin:               float32(profitMargin),
+		OperatingMarginTTM:         float32(operatingMarginTTM),
+		ReturnOnAssetsTTM:          float32(returnOnAssetsTTM),
+		ReturnOnEquityTTM:          float32(returnOnEquityTTM),
+		RevenueTTM:                 revenueTTM,
+		GrossProfitTTM:             grossProfitTTM,
+		DilutedEPSTTM:              float32(dilutedEPSTTM),
+		QuarterlyEarningsGrowthYOY: float32(quarterlyEarningsGrowthYOY),
+		QuarterlyRevenueGrowthYOY:  float32(quarterlyRevenueGrowthYOY),
+		AnalystTargetPrice:         float32(analystTargetPrice),
+		TrailingPE:                 float32(trailingPE),
+		ForwardPE:                  float32(forwardPE),
+		PriceToSalesRatioTTM:       float32(priceToSalesRatioTTM),
+		PriceToBookRatio:           float32(priceToBookRatio),
+		EVToRevenue:                float32(eVToRevenue),
+		EVToEBITDA:                 float32(eVToEBITDA),
+		Beta:                       float32(beta),
+		WeekHigh52:                 float32(weekHigh52),
+		WeekLow52:                  float32(weekLow52),
+		SharesOutstanding:          sharesOutstanding,
+		SharesFloat:                sharesFloat,
+		SharesShort:                sharesShort,
+		SharesShortPriorMonth:      sharesShortPriorMonth,
+		ShortRatio:                 float32(shortRatio),
+		ShortPercentOutstanding:    float32(shortPercentOutstanding),
+		ShortPercentFloat:          float32(shortPercentFloat),
+		PercentInsiders:            float32(percentInsiders),
+		PercentInstitutions:        float32(percentInstitutions),
+		ForwardAnnualDividendRate:  float32(forwardAnnualDividendRate),
+		ForwardAnnualDividendYield: float32(forwardAnnualDividendYield),
+		PayoutRatio:                float32(payoutRatio),
+		DividendDate:               dividendDate,
+		ExDividendDate:             exDividendDate,
 		LastSplitFactor:            s.LastSplitFactor,
-		LastSplitDate:              s.LastSplitDate,
-		UpdatedAt: pgtype.Timestamptz{
-			Time:   time.Now(),
-			Status: pgtype.Present,
-		},
+		LastSplitDate:              lastSplitDate,
+		UpdatedAt:                  time.Now(),
 	}
 }

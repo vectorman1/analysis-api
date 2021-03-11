@@ -15,30 +15,24 @@ import (
 
 type SymbolsServiceServer struct {
 	rabbitClient  *common.RabbitClient
-	symbolService *service.SymbolsService
+	symbolService *service.SymbolService
 	symbol_service.UnimplementedSymbolServiceServer
 }
 
-func NewSymbolsServiceServer(
-	symbolsService *service.SymbolsService) *SymbolsServiceServer {
+func NewSymbolServiceServer(
+	symbolsService *service.SymbolService) *SymbolsServiceServer {
 	return &SymbolsServiceServer{
 		symbolService: symbolsService,
 	}
 }
 
 func (s *SymbolsServiceServer) ReadPaged(ctx context.Context, req *symbol_service.ReadPagedSymbolRequest) (*symbol_service.ReadPagedSymbolResponse, error) {
-	if req.Filter == nil {
-		return nil, status.Errorf(codes.InvalidArgument, "provide filter")
-	}
-	if req.Filter.Order == "" {
-		return nil, status.Error(codes.InvalidArgument, "provide order argument")
-	}
 	timeoutContext, c := context.WithTimeout(ctx, 5*time.Second)
 	defer c()
 
-	res, totalItemsCount, err := s.symbolService.GetPaged(&timeoutContext, req)
+	res, totalItemsCount, err := s.symbolService.GetPaged(timeoutContext, req)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, common.GetErrorStatus(err)
 	}
 
 	resp := &symbol_service.ReadPagedSymbolResponse{
@@ -65,33 +59,18 @@ func (s *SymbolsServiceServer) Delete(ctx context.Context, req *symbol_service.D
 }
 
 func (s *SymbolsServiceServer) Details(ctx context.Context, req *symbol_service.SymbolDetailsRequest) (*symbol_service.SymbolDetailsResponse, error) {
-	userInfo := ctx.Value("user_info")
-	if userInfo == nil {
-		return nil, status.Error(codes.Unauthenticated, "provide user token")
-	}
-
-	res, err := s.symbolService.Details(&ctx, req)
+	res, err := s.symbolService.Details(ctx, req)
 	if err != nil {
-		st, ok := status.FromError(err)
-		if ok {
-			return nil, st.Err()
-		}
-		return nil, err
+		return nil, common.GetErrorStatus(err)
 	}
 
 	return res, nil
 }
 
 func (s *SymbolsServiceServer) Recalculate(ctx context.Context, req *symbol_service.RecalculateSymbolRequest) (*symbol_service.RecalculateSymbolResponse, error) {
-	userInfo := ctx.Value("user_info")
-	if userInfo == nil {
-		return nil, status.Error(codes.Unauthenticated, "provide user token")
-	}
-
-	res, err := s.symbolService.Recalculate(&ctx)
+	res, err := s.symbolService.Recalculate(ctx)
 	if err != nil {
-		return nil, err
+		return nil, common.GetErrorStatus(err)
 	}
-
 	return res, nil
 }

@@ -3,13 +3,13 @@ package db
 import (
 	"github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx"
-	"github.com/vectorman1/analysis/analysis-api/model/db"
+	"github.com/vectorman1/analysis/analysis-api/model/db/entities"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type userRepository interface {
-	Create(user *db.User) (*db.User, error)
-	Get(username string, password string) (*db.User, error)
+	Create(user *entities.User) (*entities.User, error)
+	Get(username string, password string) (*entities.User, error)
 }
 
 type UserRepository struct {
@@ -23,7 +23,7 @@ func NewUserRepository(db *pgx.ConnPool) *UserRepository {
 	}
 }
 
-func (r *UserRepository) Create(user *db.User) error {
+func (r *UserRepository) Create(user *entities.User) error {
 	query, args, err := squirrel.
 		Insert("\"user\".users").
 		Columns("uuid, private_role, username, password, created_at, updated_at").
@@ -42,7 +42,7 @@ func (r *UserRepository) Create(user *db.User) error {
 	return nil
 }
 
-func (r *UserRepository) Get(username string, password string) (*db.User, error) {
+func (r *UserRepository) Get(username string, password string) (*entities.User, error) {
 	// Find user with matching username
 	query, args, err := squirrel.
 		Select("*").
@@ -52,7 +52,7 @@ func (r *UserRepository) Get(username string, password string) (*db.User, error)
 		Limit(1).
 		ToSql()
 
-	var res db.User
+	var res entities.User
 	row := r.db.QueryRow(query, args...)
 	err = row.Scan(&res.ID, &res.Uuid, &res.PrivateRole, &res.Username, &res.Password, &res.CreatedAt, &res.UpdatedAt, &res.DeletedAt)
 	if err != nil {

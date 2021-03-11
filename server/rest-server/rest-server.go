@@ -4,9 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/vectorman1/analysis/analysis-api/common"
+	"github.com/vectorman1/analysis/analysis-api/generated/history_service"
 
-	"github.com/vectorman1/analysis/analysis-api/generated/historical_service"
+	"github.com/vectorman1/analysis/analysis-api/common"
 
 	"github.com/vectorman1/analysis/analysis-api/generated/user_service"
 
@@ -40,7 +40,7 @@ func RunServer(ctx context.Context, config *common.Config) error {
 	if err := user_service.RegisterUserServiceHandlerFromEndpoint(ctx, mux, "0.0.0.0:"+config.GRPCPort, opts); err != nil {
 		logger_grpc.Log.Fatal("failed to start HTTP gateway", zap.String("reason", err.Error()))
 	}
-	if err := historical_service.RegisterHistoricalServiceHandlerFromEndpoint(ctx, mux, "0.0.0.0:"+config.GRPCPort, opts); err != nil {
+	if err := history_service.RegisterHistoryServiceHandlerFromEndpoint(ctx, mux, "0.0.0.0:"+config.GRPCPort, opts); err != nil {
 		logger_grpc.Log.Fatal("failed to start HTTP gateway", zap.String("reason", err.Error()))
 	}
 
@@ -73,8 +73,6 @@ func preflightHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-// allowCORS allows Cross Origin Resoruce Sharing from any origin.
-// Don't do this without consideration in production systems.
 func allowCORS(h http.Handler, allowedOrigin string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if origin := r.Header.Get("Origin"); origin != "" {

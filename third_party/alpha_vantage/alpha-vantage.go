@@ -1,4 +1,4 @@
-package service
+package alpha_vantage
 
 import (
 	"encoding/json"

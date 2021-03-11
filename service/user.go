@@ -3,9 +3,11 @@ package service
 import (
 	"time"
 
-	"github.com/vectorman1/analysis/analysis-api/model"
+	"github.com/vectorman1/analysis/analysis-api/model/db/entities"
+	"github.com/vectorman1/analysis/analysis-api/model/service"
 
-	dbmodel "github.com/vectorman1/analysis/analysis-api/model/db"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -40,15 +42,19 @@ func NewUserService(userRepository *db.UserRepository, config *common.Config) *U
 // Login attempts to find a user with a matching username and hashed password
 // and returns a response with a Token or an error
 func (s *UserService) Login(request *user_service.LoginRequest) (*user_service.LoginResponse, error) {
+	if request.Username == "" || request.Password == "" {
+		return nil, status.Error(codes.InvalidArgument, "Wrong username or password.")
+	}
+
 	user, err := s.userRepository.Get(request.Username, request.Password)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.InvalidArgument, "Wrong username or password.")
 	}
 	var u string
 	user.Uuid.AssignTo(&u)
 
 	expTime := time.Now().Add(24 * 60 * time.Minute)
-	claims := &model.Claims{
+	claims := &service.Claims{
 		Uuid:        u,
 		PrivateRole: user.PrivateRole,
 		StandardClaims: jwt.StandardClaims{
@@ -71,9 +77,19 @@ func (s *UserService) Login(request *user_service.LoginRequest) (*user_service.L
 // Register attempts to create a User with the corresponding
 // username and hashing the password.
 func (s *UserService) Register(request *user_service.RegisterRequest) (*user_service.RegisterResponse, error) {
-	user := &dbmodel.User{
+	if request.Username == "" || request.Password == "" {
+		return nil, status.Error(codes.InvalidArgument, "Invalid username or password.")
+	}
+	if len(request.Password) < 8 {
+		return nil, status.Error(codes.InvalidArgument, "Minimum password length is 8.")
+	}
+	if len(request.Username) < 6 {
+		return nil, status.Error(codes.InvalidArgument, "Minimum username length is 6.")
+	}
+
+	user := &entities.User{
 		Uuid:        pgtype.UUID{Status: pgtype.Present},
-		PrivateRole: dbmodel.Default,
+		PrivateRole: entities.Default,
 		Username:    request.Username,
 		Password:    request.Password,
 	}

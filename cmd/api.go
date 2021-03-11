@@ -6,6 +6,18 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
+
+	"github.com/vectorman1/analysis/analysis-api/third_party/yahoo"
+
+	"github.com/vectorman1/analysis/analysis-api/third_party/alpha_vantage"
+	"github.com/vectorman1/analysis/analysis-api/third_party/trading_212"
+
+	"github.com/vectorman1/analysis/analysis-api/jobs"
+
+	"go.mongodb.org/mongo-driver/mongo"
+
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/jackc/pgx"
 
@@ -41,17 +53,31 @@ func RunServer() error {
 		return fmt.Errorf("failed to initialize logger-grpc: %v", err)
 	}
 
-	// set up db connection pool
+	// set up postgres db connection pool
 	dbConnPool, err := db.GetConnPool(config)
 	if err != nil {
-		return fmt.Errorf("failed to create conn pool: %v", err)
+		return fmt.Errorf("failed to create entities conn pool: %v", err)
 	}
 
 	conn, err := dbConnPool.Acquire()
 	if err != nil {
-		return fmt.Errorf("failed to open database: %v", err)
+		return fmt.Errorf("failed to open entities database: %v", err)
 	}
 	defer conn.Close()
+
+	// set up mongodb connection pool
+	client, err := mongo.NewClient(options.Client().ApplyURI(config.MongoDbConnString))
+	if err != nil {
+		return fmt.Errorf("failed to create documents client: %v", err)
+	}
+
+	tctx, c := context.WithTimeout(context.Background(), 5*time.Second)
+	defer c()
+	err = client.Connect(tctx)
+	if err != nil {
+		return fmt.Errorf("failed to create documents conn pool: %v", err)
+	}
+	defer client.Disconnect(tctx)
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
@@ -61,7 +87,7 @@ func RunServer() error {
 		fmt.Println(sig)
 	}()
 
-	s, err := initializeServices(ctx, dbConnPool, config)
+	s, err := initializeServices(ctx, dbConnPool, client.Database(common.MONGO_DB_DATABASE), config)
 	if err != nil {
 		return err
 	}
@@ -74,24 +100,31 @@ func RunServer() error {
 	return s.Run()
 }
 
-func initializeServices(ctx context.Context, dbConnPool *pgx.ConnPool, config *common.Config) (*grpc_server.GRPCServer, error) {
-	symbolRepository := db.NewSymbolRepository(dbConnPool)
-	symbolOverviewRepository := db.NewSymbolOverviewRepository(dbConnPool)
-	userRepository := db.NewUserRepository(dbConnPool)
-	historicalRepository := db.NewHistoricalRepository(dbConnPool)
+func initializeServices(ctx context.Context, pgConnPool *pgx.ConnPool, mongoDatabase *mongo.Database, config *common.Config) (*grpc_server.GRPCServer, error) {
+	historyRepository := db.NewHistoryRepository(mongoDatabase)
+	symbolOverviewRepository := db.NewSymbolOverviewRepository(mongoDatabase)
 
-	externalSymbolService := service.NewExternalSymbolService()
-	alphaVantageService := service.NewAlphaVantageService(config)
+	symbolRepository := db.NewSymbolRepository(pgConnPool)
+	userRepository := db.NewUserRepository(pgConnPool)
 
-	symbolsService := service.NewSymbolsService(symbolRepository, symbolOverviewRepository, alphaVantageService, externalSymbolService)
+	trading212Service := trading_212.NewTrading212Service()
+	alphaVantageService := alpha_vantage.NewAlphaVantageService(config)
+	yahooService := yahoo.NewYahooService()
+
+	symbolService := service.NewSymbolService(symbolRepository, symbolOverviewRepository, alphaVantageService, trading212Service)
 	userService := service.NewUserService(userRepository, config)
-	historicalService := service.NewHistoricalService(historicalRepository, symbolRepository)
+	historyService := service.NewHistoryService(yahooService, historyRepository, symbolRepository, symbolOverviewRepository)
 
-	symbolsServiceServer := server.NewSymbolsServiceServer(symbolsService)
+	symbolServiceServer := server.NewSymbolServiceServer(symbolService)
 	userServiceServer := server.NewUserServiceServer(userService)
-	historicalServiceServer := server.NewHistoricalServiceServer(historicalService)
+	historyServiceServer := server.NewHistoryServiceServer(historyService)
 
-	return grpc_server.NewGRPCServer(ctx, config.GRPCPort, symbolsServiceServer, userServiceServer, historicalServiceServer), nil
+	err := jobs.ScheduleJobs(symbolService, historyService)
+	if err != nil {
+		return nil, err
+	}
+
+	return grpc_server.NewGRPCServer(ctx, config.GRPCPort, symbolServiceServer, userServiceServer, historyServiceServer), nil
 }
 
 func main() {
