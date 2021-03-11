@@ -3,6 +3,8 @@ package server
 import (
 	"context"
 
+	"github.com/vectorman1/analysis/analysis-api/common"
+
 	"github.com/vectorman1/analysis/analysis-api/generated/historical_service"
 	"github.com/vectorman1/analysis/analysis-api/service"
 )
@@ -19,9 +21,10 @@ func NewHistoricalServiceServer(historicalService *service.HistoricalService) *H
 }
 
 func (s *HistoricalServiceServer) GetBySymbolUuid(ctx context.Context, req *historical_service.GetBySymbolUuidRequest) (*historical_service.GetBySymbolUuidResponse, error) {
-	h, err := s.historicalService.GetBySymbolUuid(&ctx, req)
+	res, err := s.historicalService.GetBySymbolUuid(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, common.GetErrorStatus(err)
 	}
-	return &historical_service.GetBySymbolUuidResponse{Items: *h}, nil
+
+	return res, nil
 }
