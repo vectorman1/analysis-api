@@ -10,7 +10,7 @@ import (
 )
 
 type SymbolRecalculationJob struct {
-	symbolService *service.SymbolsService
+	symbolService *service.SymbolService
 }
 
 func (j SymbolRecalculationJob) Run() {
