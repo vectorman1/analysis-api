@@ -1,4 +1,4 @@
-package db
+package pgsql
 
 type TriggerType uint
 type SourceValueType uint
