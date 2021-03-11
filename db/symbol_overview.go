@@ -40,7 +40,7 @@ func (r *SymbolOverviewRepository) Insert(ctx context.Context, overview *documen
 func (r *SymbolOverviewRepository) GetBySymbolUuid(ctx context.Context, uuid string) (*documents.SymbolOverview, error) {
 	var overview documents.SymbolOverview
 	err := r.mondodb.Collection(common.OVERVIEWS_COLLECTION).
-		FindOne(ctx, bson.M{"symbol_uuid": uuid}).
+		FindOne(ctx, bson.M{"symboluuid": uuid}).
 		Decode(&overview)
 	if err != nil {
 		return nil, err

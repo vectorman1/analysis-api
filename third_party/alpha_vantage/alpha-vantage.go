@@ -26,7 +26,7 @@ type AlphaVantageService struct {
 }
 
 func NewAlphaVantageService(config *common.Config) *AlphaVantageService {
-	client := &http.Client{Timeout: 3 * time.Second}
+	client := &http.Client{Timeout: 5 * time.Second}
 
 	return &AlphaVantageService{
 		config:     config,
@@ -34,7 +34,7 @@ func NewAlphaVantageService(config *common.Config) *AlphaVantageService {
 	}
 }
 
-func (s *AlphaVantageService) GetOrUpdateSymbolOverview(symbolName string) (*service.SymbolOverview, error) {
+func (s *AlphaVantageService) GetSymbolOverview(symbolName string) (*service.SymbolOverview, error) {
 	url := fmt.Sprintf(SymbolOverviewEndpoint, symbolName, s.config.AlphaVantageApiKey)
 	request, _ := http.NewRequest(http.MethodGet, url, nil)
 
