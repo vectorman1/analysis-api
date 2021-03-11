@@ -17,7 +17,8 @@ import (
 )
 
 type historicalRepository interface {
-	GetBySymbolUuid(ctx *context.Context, symbolUuid string, startDate time.Time, endDate time.Time) (*[]documents.Historical, error)
+	InsertMany(ctx context.Context, list []documents.Historical) (int, error)
+	GetBySymbolUuid(ctx context.Context, symbolUuid string, startDate time.Time, endDate time.Time) (*[]documents.Historical, error)
 }
 
 type HistoricalRepository struct {
