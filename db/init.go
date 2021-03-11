@@ -9,15 +9,15 @@ import (
 
 func GetConnPool(config *common.Config) (*pgx.ConnPool, error) {
 	cfg := pgx.ConnConfig{
-		User:     config.DatastoreDBUser,
-		Password: config.DatastoreDBPassword,
-		Database: config.DatastoreDBSchema,
-		Host:     config.DatastoreDBHost,
+		User:     config.PostgreSQLConfig.DatastoreDBUser,
+		Password: config.PostgreSQLConfig.DatastoreDBPassword,
+		Database: config.PostgreSQLConfig.DatastoreDBSchema,
+		Host:     config.PostgreSQLConfig.DatastoreDBHost,
 	}
 
 	poolConfig := pgx.ConnPoolConfig{
 		ConnConfig:     cfg,
-		MaxConnections: config.DatabaseMaxConnections,
+		MaxConnections: config.PostgreSQLConfig.DatabaseMaxConnections,
 		AcquireTimeout: 5 * time.Second,
 	}
 
