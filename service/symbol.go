@@ -2,15 +2,17 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
+
+	"github.com/vectorman1/analysis/analysis-api/model/db/entities"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"google.golang.org/grpc/grpclog"
 
 	"github.com/vectorman1/analysis/analysis-api/common"
-
-	db2 "github.com/vectorman1/analysis/analysis-api/model/db"
 
 	"github.com/vectorman1/analysis/analysis-api/generated/worker_symbol_service"
 
@@ -23,15 +25,15 @@ import (
 
 type symbolsService interface {
 	// repo methods
-	GetPaged(ctx *context.Context, req *symbol_service.ReadPagedSymbolRequest) (*[]*proto_models.Symbol, uint, error)
-	Details(ctx *context.Context, req *symbol_service.SymbolDetailsRequest) (*symbol_service.SymbolDetailsResponse, error)
+	GetPaged(ctx context.Context, req *symbol_service.ReadPagedSymbolRequest) (*[]*proto_models.Symbol, uint, error)
+	Details(ctx context.Context, req *symbol_service.SymbolDetailsRequest) (*symbol_service.SymbolDetailsResponse, error)
 
 	// service methods
-	Recalculate(ctx *context.Context) (*symbol_service.RecalculateSymbolResponse, error)
+	Recalculate(ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error)
 	processRecalculationResponse(
 		input []*worker_symbol_service.RecalculateSymbolsResponse,
-		ctx *context.Context) (*symbol_service.RecalculateSymbolResponse, error)
-	symbolDataToEntity(in *[]*proto_models.Symbol) ([]*db2.Symbol, error)
+		ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error)
+	symbolDataToEntity(in *[]*proto_models.Symbol) ([]*entities.Symbol, error)
 }
 
 type SymbolsService struct {
@@ -55,9 +57,17 @@ func NewSymbolsService(
 	}
 }
 
-func (s *SymbolsService) GetPaged(ctx *context.Context, req *symbol_service.ReadPagedSymbolRequest) (*[]*proto_models.Symbol, uint, error) {
+func (s *SymbolsService) GetPaged(ctx context.Context, req *symbol_service.ReadPagedSymbolRequest) (*[]*proto_models.Symbol, uint, error) {
+	if req.Filter == nil {
+		return nil, 0, status.Errorf(codes.InvalidArgument, "provide filter")
+	}
+	if req.Filter.Order == "" {
+		return nil, 0, status.Error(codes.InvalidArgument, "provide order argument")
+	}
+
 	var res []*proto_models.Symbol
 	syms, totalItemsCount, err := s.symbolsRepository.GetPaged(ctx, req)
+
 	if err != nil {
 		return nil, 0, err
 	}
@@ -68,7 +78,12 @@ func (s *SymbolsService) GetPaged(ctx *context.Context, req *symbol_service.Read
 	return &res, totalItemsCount, nil
 }
 
-func (s *SymbolsService) Details(ctx *context.Context, req *symbol_service.SymbolDetailsRequest) (*symbol_service.SymbolDetailsResponse, error) {
+func (s *SymbolsService) Details(ctx context.Context, req *symbol_service.SymbolDetailsRequest) (*symbol_service.SymbolDetailsResponse, error) {
+	userInfo := ctx.Value("user_info")
+	if userInfo == nil {
+		return nil, status.Error(codes.Unauthenticated, "provide user token")
+	}
+
 	symbol, err := s.symbolsRepository.GetByUuid(ctx, req.Uuid)
 	if err != nil {
 		return nil, err
