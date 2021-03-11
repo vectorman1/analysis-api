@@ -1,15 +1,15 @@
 syntax = "proto3";
-package v1.historical_service;
+package v1.history_service;
 
 import "google/protobuf/timestamp.proto";
 import "google/api/annotations.proto";
 import "protoc-gen-swagger/options/annotations.proto";
 
-option go_package = "github.com/vectorman1/analysis-api/generated/historical_service";
+option go_package = "github.com/vectorman1/analysis-api/generated/history_service";
 
 option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
   info: {
-    title: "Historical Service";
+    title: "History Service";
     version: "1.0";
     contact: {
       name: "Dystopia Systems";
@@ -33,7 +33,7 @@ option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
   }
 };
 
-message Historical {
+message History {
   float open = 1;
   float close = 2;
   float high = 3;
@@ -51,13 +51,13 @@ message GetBySymbolUuidRequest {
 }
 
 message GetBySymbolUuidResponse {
-  repeated Historical items = 1;
+  repeated History items = 1;
 }
 
-service HistoricalService {
+service HistoryService {
   rpc GetBySymbolUuid(GetBySymbolUuidRequest) returns (GetBySymbolUuidResponse) {
     option (google.api.http) = {
-      post: "/api/v1/historicals/{symbolUuid}",
+      post: "/api/v1/history/{symbolUuid}",
       body: "*"
     };
   }
