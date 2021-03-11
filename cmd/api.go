@@ -6,6 +6,13 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
+
+	"github.com/vectorman1/analysis/analysis-api/jobs"
+
+	"go.mongodb.org/mongo-driver/mongo"
+
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/jackc/pgx"
 
@@ -41,17 +48,31 @@ func RunServer() error {
 		return fmt.Errorf("failed to initialize logger-grpc: %v", err)
 	}
 
-	// set up db connection pool
+	// set up postgres db connection pool
 	dbConnPool, err := db.GetConnPool(config)
 	if err != nil {
-		return fmt.Errorf("failed to create conn pool: %v", err)
+		return fmt.Errorf("failed to create entities conn pool: %v", err)
 	}
 
 	conn, err := dbConnPool.Acquire()
 	if err != nil {
-		return fmt.Errorf("failed to open database: %v", err)
+		return fmt.Errorf("failed to open entities database: %v", err)
 	}
 	defer conn.Close()
+
+	// set up mongodb connection pool
+	client, err := mongo.NewClient(options.Client().ApplyURI(config.MongoDbConnString))
+	if err != nil {
+		return fmt.Errorf("failed to create documents client: %v", err)
+	}
+
+	tctx, c := context.WithTimeout(context.Background(), 5*time.Second)
+	defer c()
+	err = client.Connect(tctx)
+	if err != nil {
+		return fmt.Errorf("failed to create documents conn pool: %v", err)
+	}
+	defer client.Disconnect(tctx)
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
@@ -61,7 +82,7 @@ func RunServer() error {
 		fmt.Println(sig)
 	}()
 
-	s, err := initializeServices(ctx, dbConnPool, config)
+	s, err := initializeServices(ctx, dbConnPool, client.Database(common.MONGO_DB_DATABASE), config)
 	if err != nil {
 		return err
 	}
@@ -74,22 +95,28 @@ func RunServer() error {
 	return s.Run()
 }
 
-func initializeServices(ctx context.Context, dbConnPool *pgx.ConnPool, config *common.Config) (*grpc_server.GRPCServer, error) {
-	symbolRepository := db.NewSymbolRepository(dbConnPool)
-	symbolOverviewRepository := db.NewSymbolOverviewRepository(dbConnPool)
-	userRepository := db.NewUserRepository(dbConnPool)
-	historicalRepository := db.NewHistoricalRepository(dbConnPool)
+func initializeServices(ctx context.Context, pgConnPool *pgx.ConnPool, mongoDatabase *mongo.Database, config *common.Config) (*grpc_server.GRPCServer, error) {
+	historicalRepository := db.NewHistoricalRepository(pgConnPool, mongoDatabase)
+	symbolOverviewRepository := db.NewSymbolOverviewRepository(pgConnPool, mongoDatabase)
+
+	symbolRepository := db.NewSymbolRepository(pgConnPool)
+	userRepository := db.NewUserRepository(pgConnPool)
 
 	externalSymbolService := service.NewExternalSymbolService()
 	alphaVantageService := service.NewAlphaVantageService(config)
 
 	symbolsService := service.NewSymbolsService(symbolRepository, symbolOverviewRepository, alphaVantageService, externalSymbolService)
 	userService := service.NewUserService(userRepository, config)
-	historicalService := service.NewHistoricalService(historicalRepository, symbolRepository)
+	historicalService := service.NewHistoricalService(historicalRepository, symbolRepository, symbolOverviewRepository)
 
 	symbolsServiceServer := server.NewSymbolsServiceServer(symbolsService)
 	userServiceServer := server.NewUserServiceServer(userService)
 	historicalServiceServer := server.NewHistoricalServiceServer(historicalService)
+
+	err := jobs.ScheduleJobs(symbolsService)
+	if err != nil {
+		return nil, err
+	}
 
 	return grpc_server.NewGRPCServer(ctx, config.GRPCPort, symbolsServiceServer, userServiceServer, historicalServiceServer), nil
 }
