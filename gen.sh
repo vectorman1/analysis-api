@@ -61,27 +61,27 @@ protoc -I . --proto_path=api/proto/v1 \
             --grpc-gateway_opt generate_unbound_methods=true \
              user_service.proto
 
-mkdir -p generated/historical_service
+mkdir -p generated/history_service
 protoc -I . --proto_path=api/proto/v1 \
             --proto_path=third_party \
-            --go_out=generated/historical_service \
+            --go_out=generated/history_service \
             --go_opt=paths=source_relative \
-            --go-grpc_out=generated/historical_service \
+            --go-grpc_out=generated/history_service \
             --go-grpc_opt=paths=source_relative \
-            historical_service.proto
+            history_service.proto
 
 protoc -I . --proto_path=api/proto/v1 \
             --proto_path=third_party \
             --openapiv2_out ./api/swagger/v1 \
             --openapiv2_opt logtostderr=true \
-             historical_service.proto
+             history_service.proto
 
 protoc -I . --proto_path=api/proto/v1 \
             --proto_path=third_party \
-            --grpc-gateway_out ./generated/historical_service \
+            --grpc-gateway_out ./generated/history_service \
             --grpc-gateway_opt paths=source_relative \
             --grpc-gateway_opt generate_unbound_methods=true \
-            historical_service.proto
+            history_service.proto
 
 # Worker services
 
