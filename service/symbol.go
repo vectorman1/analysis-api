@@ -5,6 +5,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/vectorman1/analysis/analysis-api/generated/worker_symbol_service"
+
+	"github.com/vectorman1/analysis/analysis-api/third_party/alpha_vantage"
+	"github.com/vectorman1/analysis/analysis-api/third_party/trading_212"
+
 	"github.com/vectorman1/analysis/analysis-api/model/db/entities"
 
 	"google.golang.org/grpc/codes"
@@ -14,8 +19,6 @@ import (
 
 	"github.com/vectorman1/analysis/analysis-api/common"
 
-	"github.com/vectorman1/analysis/analysis-api/generated/worker_symbol_service"
-
 	"github.com/jackc/pgx"
 
 	"github.com/vectorman1/analysis/analysis-api/db"
@@ -23,7 +26,7 @@ import (
 	"github.com/vectorman1/analysis/analysis-api/generated/symbol_service"
 )
 
-type symbolsService interface {
+type symbolService interface {
 	// repo methods
 	GetPaged(ctx context.Context, req *symbol_service.ReadPagedSymbolRequest) (*[]*proto_models.Symbol, uint, error)
 	Details(ctx context.Context, req *symbol_service.SymbolDetailsRequest) (*symbol_service.SymbolDetailsResponse, error)
@@ -36,28 +39,28 @@ type symbolsService interface {
 	symbolDataToEntity(in *[]*proto_models.Symbol) ([]*entities.Symbol, error)
 }
 
-type SymbolsService struct {
-	symbolsService
-	symbolsRepository        *db.SymbolRepository
+type SymbolService struct {
+	symbolService
+	symbolRepository         *db.SymbolRepository
 	symbolOverviewRepository *db.SymbolOverviewRepository
-	alphaVantageService      *AlphaVantageService
-	externalSymbolService    *ExternalSymbolService
+	alphaVantageService      *alpha_vantage.AlphaVantageService
+	externalSymbolService    *trading_212.ExternalSymbolService
 }
 
-func NewSymbolsService(
+func NewSymbolService(
 	symbolsRepository *db.SymbolRepository,
 	symbolOverviewRepository *db.SymbolOverviewRepository,
-	alphaVantageService *AlphaVantageService,
-	externalSymbolService *ExternalSymbolService) *SymbolsService {
-	return &SymbolsService{
-		symbolsRepository:        symbolsRepository,
+	alphaVantageService *alpha_vantage.AlphaVantageService,
+	externalSymbolService *trading_212.ExternalSymbolService) *SymbolService {
+	return &SymbolService{
+		symbolRepository:         symbolsRepository,
 		symbolOverviewRepository: symbolOverviewRepository,
 		alphaVantageService:      alphaVantageService,
 		externalSymbolService:    externalSymbolService,
 	}
 }
 
-func (s *SymbolsService) GetPaged(ctx context.Context, req *symbol_service.ReadPagedSymbolRequest) (*[]*proto_models.Symbol, uint, error) {
+func (s *SymbolService) GetPaged(ctx context.Context, req *symbol_service.ReadPagedSymbolRequest) (*[]*proto_models.Symbol, uint, error) {
 	if req.Filter == nil {
 		return nil, 0, status.Errorf(codes.InvalidArgument, "provide filter")
 	}
@@ -66,25 +69,25 @@ func (s *SymbolsService) GetPaged(ctx context.Context, req *symbol_service.ReadP
 	}
 
 	var res []*proto_models.Symbol
-	syms, totalItemsCount, err := s.symbolsRepository.GetPaged(ctx, req)
-
+	syms, totalItemsCount, err := s.symbolRepository.GetPaged(ctx, req)
 	if err != nil {
 		return nil, 0, err
 	}
+
 	for _, sym := range *syms {
-		res = append(res, sym.ToProtoObject())
+		res = append(res, sym.ToProto())
 	}
 
 	return &res, totalItemsCount, nil
 }
 
-func (s *SymbolsService) Details(ctx context.Context, req *symbol_service.SymbolDetailsRequest) (*symbol_service.SymbolDetailsResponse, error) {
+func (s *SymbolService) Details(ctx context.Context, req *symbol_service.SymbolDetailsRequest) (*symbol_service.SymbolDetailsResponse, error) {
 	userInfo := ctx.Value("user_info")
 	if userInfo == nil {
 		return nil, status.Error(codes.Unauthenticated, "provide user token")
 	}
 
-	symbol, err := s.symbolsRepository.GetByUuid(ctx, req.Uuid)
+	symbol, err := s.symbolRepository.GetByUuid(ctx, req.Uuid)
 	if err != nil {
 		return nil, err
 	}
@@ -108,12 +111,12 @@ func (s *SymbolsService) Details(ctx context.Context, req *symbol_service.Symbol
 	}
 
 	return &symbol_service.SymbolDetailsResponse{
-		Symbol:  symbol.ToProtoObject(),
-		Details: overview.ToProtoObject(),
+		Symbol:  symbol.ToProto(),
+		Details: overview.ToProto(),
 	}, nil
 }
 
-func (s *SymbolsService) Recalculate(ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error) {
+func (s *SymbolService) Recalculate(ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error) {
 	oldSymbols, _, err := s.GetPaged(ctx, &symbol_service.ReadPagedSymbolRequest{
 		Filter: &symbol_service.SymbolFilter{
 			PageSize:   100000,
@@ -140,7 +143,7 @@ func (s *SymbolsService) Recalculate(ctx context.Context) (*symbol_service.Recal
 	return response, nil
 }
 
-func (s *SymbolsService) processRecalculationResponse(
+func (s *SymbolService) processRecalculationResponse(
 	input []*worker_symbol_service.RecalculateSymbolsResponse,
 	ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error) {
 
@@ -165,7 +168,7 @@ func (s *SymbolsService) processRecalculationResponse(
 	timeoutContext, c := context.WithTimeout(ctx, 10*time.Second)
 	defer c()
 
-	tx, err := s.symbolsRepository.BeginTx(&timeoutContext, &pgx.TxOptions{})
+	tx, err := s.symbolRepository.BeginTx(&timeoutContext, &pgx.TxOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +180,7 @@ func (s *SymbolsService) processRecalculationResponse(
 		return nil, err
 	}
 
-	_, err = s.symbolsRepository.InsertBulk(tx, timeoutContext, createEntities)
+	_, err = s.symbolRepository.InsertBulk(tx, timeoutContext, createEntities)
 	if err != nil {
 		tx.RollbackEx(timeoutContext)
 		return nil, err
@@ -189,7 +192,7 @@ func (s *SymbolsService) processRecalculationResponse(
 		tx.RollbackEx(timeoutContext)
 		return nil, err
 	}
-	_, err = s.symbolsRepository.DeleteBulk(tx, timeoutContext, deleteEntities)
+	_, err = s.symbolRepository.DeleteBulk(tx, timeoutContext, deleteEntities)
 	if err != nil {
 		tx.RollbackEx(timeoutContext)
 		return nil, err
@@ -201,7 +204,7 @@ func (s *SymbolsService) processRecalculationResponse(
 		tx.RollbackEx(timeoutContext)
 		return nil, err
 	}
-	_, err = s.symbolsRepository.UpdateBulk(tx, timeoutContext, updateEntities)
+	_, err = s.symbolRepository.UpdateBulk(tx, timeoutContext, updateEntities)
 	if err != nil {
 		tx.RollbackEx(timeoutContext)
 		return nil, err
@@ -221,7 +224,7 @@ func (s *SymbolsService) processRecalculationResponse(
 	}, nil
 }
 
-func (s *SymbolsService) symbolDataToEntity(in *[]*proto_models.Symbol) ([]*entities.Symbol, error) {
+func (s *SymbolService) symbolDataToEntity(in *[]*proto_models.Symbol) ([]*entities.Symbol, error) {
 	var result []*entities.Symbol
 
 	for _, sym := range *in {
@@ -231,7 +234,7 @@ func (s *SymbolsService) symbolDataToEntity(in *[]*proto_models.Symbol) ([]*enti
 	return result, nil
 }
 
-func (s *SymbolsService) generateRecalculationResult(newSymbols []*proto_models.Symbol, oldSymbols []*proto_models.Symbol) []*worker_symbol_service.RecalculateSymbolsResponse {
+func (s *SymbolService) generateRecalculationResult(newSymbols []*proto_models.Symbol, oldSymbols []*proto_models.Symbol) []*worker_symbol_service.RecalculateSymbolsResponse {
 	var wg sync.WaitGroup
 	unique := sync.Map{}
 	// generate create, update and ignore responses

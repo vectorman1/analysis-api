@@ -64,7 +64,7 @@ type SymbolOverview struct {
 	UpdatedAt                  time.Time
 }
 
-func (s *SymbolOverview) ToProtoObject() *symbol_service.SymbolOverview {
+func (s *SymbolOverview) ToProto() *symbol_service.SymbolOverview {
 	latestQuarter, _ := ptypes.TimestampProto(s.LatestQuarter)
 	updatedAt, _ := ptypes.TimestampProto(s.UpdatedAt)
 	dividendDate, _ := ptypes.TimestampProto(s.DividendDate)

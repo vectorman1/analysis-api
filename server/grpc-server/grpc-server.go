@@ -7,7 +7,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/vectorman1/analysis/analysis-api/generated/historical_service"
+	"github.com/vectorman1/analysis/analysis-api/generated/history_service"
 
 	"github.com/vectorman1/analysis/analysis-api/generated/user_service"
 	"github.com/vectorman1/analysis/analysis-api/service/server"
@@ -19,25 +19,25 @@ import (
 )
 
 type GRPCServer struct {
-	Context                 context.Context
-	Port                    string
-	symbolsServiceServer    symbol_service.SymbolServiceServer
-	userServiceServer       user_service.UserServiceServer
-	historicalServiceServer historical_service.HistoricalServiceServer
+	Context              context.Context
+	Port                 string
+	symbolServiceServer  symbol_service.SymbolServiceServer
+	userServiceServer    user_service.UserServiceServer
+	historyServiceServer history_service.HistoryServiceServer
 }
 
 func NewGRPCServer(
 	ctx context.Context,
 	port string,
-	symbolsServiceServer symbol_service.SymbolServiceServer,
+	symbolServiceServer symbol_service.SymbolServiceServer,
 	userServiceServer *server.UserServiceServer,
-	historicalServiceServer *server.HistoricalServiceServer) *GRPCServer {
+	historyServiceServer *server.HistoryServiceServer) *GRPCServer {
 	return &GRPCServer{
-		Context:                 ctx,
-		Port:                    port,
-		symbolsServiceServer:    symbolsServiceServer,
-		userServiceServer:       userServiceServer,
-		historicalServiceServer: historicalServiceServer,
+		Context:              ctx,
+		Port:                 port,
+		symbolServiceServer:  symbolServiceServer,
+		userServiceServer:    userServiceServer,
+		historyServiceServer: historyServiceServer,
 	}
 }
 
@@ -54,9 +54,9 @@ func (s *GRPCServer) Run() error {
 	server := grpc.NewServer(opts...)
 
 	// register services
-	symbol_service.RegisterSymbolServiceServer(server, s.symbolsServiceServer)
+	symbol_service.RegisterSymbolServiceServer(server, s.symbolServiceServer)
 	user_service.RegisterUserServiceServer(server, s.userServiceServer)
-	historical_service.RegisterHistoricalServiceServer(server, s.historicalServiceServer)
+	history_service.RegisterHistoryServiceServer(server, s.historyServiceServer)
 
 	// graceful shutdown
 	c := make(chan os.Signal, 1)

@@ -15,12 +15,12 @@ import (
 
 type SymbolsServiceServer struct {
 	rabbitClient  *common.RabbitClient
-	symbolService *service.SymbolsService
+	symbolService *service.SymbolService
 	symbol_service.UnimplementedSymbolServiceServer
 }
 
-func NewSymbolsServiceServer(
-	symbolsService *service.SymbolsService) *SymbolsServiceServer {
+func NewSymbolServiceServer(
+	symbolsService *service.SymbolService) *SymbolsServiceServer {
 	return &SymbolsServiceServer{
 		symbolService: symbolsService,
 	}

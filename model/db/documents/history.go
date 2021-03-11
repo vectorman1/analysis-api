@@ -3,12 +3,12 @@ package documents
 import (
 	"time"
 
-	"github.com/golang/protobuf/ptypes"
+	"github.com/vectorman1/analysis/analysis-api/generated/history_service"
 
-	"github.com/vectorman1/analysis/analysis-api/generated/historical_service"
+	"github.com/golang/protobuf/ptypes"
 )
 
-type Historical struct {
+type History struct {
 	SymbolUuid string
 	Open       float32
 	Close      float32
@@ -20,11 +20,11 @@ type Historical struct {
 	CreatedAt  time.Time
 }
 
-func (h *Historical) ToProtoObject() *historical_service.Historical {
+func (h *History) ToProto() *history_service.History {
 	timestamp, _ := ptypes.TimestampProto(h.Timestamp)
 	createdAt, _ := ptypes.TimestampProto(h.CreatedAt)
 
-	return &historical_service.Historical{
+	return &history_service.History{
 		Open:      h.Open,
 		Close:     h.Close,
 		High:      h.High,
@@ -34,4 +34,8 @@ func (h *Historical) ToProtoObject() *historical_service.Historical {
 		Timestamp: timestamp,
 		CreatedAt: createdAt,
 	}
+}
+
+func (a History) DistinctByTimestamp(in History) {
+
 }

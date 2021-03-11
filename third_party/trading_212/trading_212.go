@@ -1,4 +1,4 @@
-package service
+package trading_212
 
 import (
 	"context"
@@ -25,7 +25,7 @@ type externalSymbolService interface {
 type ExternalSymbolService struct {
 }
 
-func NewExternalSymbolService() *ExternalSymbolService {
+func NewTrading212Service() *ExternalSymbolService {
 	return &ExternalSymbolService{}
 }
 

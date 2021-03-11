@@ -44,7 +44,7 @@ func (Symbol) FromProtoObject(sym *proto_models.Symbol) *Symbol {
 	return res
 }
 
-func (s *Symbol) ToProtoObject() *proto_models.Symbol {
+func (s *Symbol) ToProto() *proto_models.Symbol {
 	// db constraint
 	var u string
 	s.Uuid.AssignTo(&u)

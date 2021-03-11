@@ -8,6 +8,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/vectorman1/analysis/analysis-api/third_party/yahoo"
+
+	"github.com/vectorman1/analysis/analysis-api/third_party/alpha_vantage"
+	"github.com/vectorman1/analysis/analysis-api/third_party/trading_212"
+
 	"github.com/vectorman1/analysis/analysis-api/jobs"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -96,29 +101,30 @@ func RunServer() error {
 }
 
 func initializeServices(ctx context.Context, pgConnPool *pgx.ConnPool, mongoDatabase *mongo.Database, config *common.Config) (*grpc_server.GRPCServer, error) {
-	historicalRepository := db.NewHistoricalRepository(pgConnPool, mongoDatabase)
-	symbolOverviewRepository := db.NewSymbolOverviewRepository(pgConnPool, mongoDatabase)
+	historyRepository := db.NewHistoryRepository(mongoDatabase)
+	symbolOverviewRepository := db.NewSymbolOverviewRepository(mongoDatabase)
 
 	symbolRepository := db.NewSymbolRepository(pgConnPool)
 	userRepository := db.NewUserRepository(pgConnPool)
 
-	externalSymbolService := service.NewExternalSymbolService()
-	alphaVantageService := service.NewAlphaVantageService(config)
+	trading212Service := trading_212.NewTrading212Service()
+	alphaVantageService := alpha_vantage.NewAlphaVantageService(config)
+	yahooService := yahoo.NewYahooService()
 
-	symbolsService := service.NewSymbolsService(symbolRepository, symbolOverviewRepository, alphaVantageService, externalSymbolService)
+	symbolService := service.NewSymbolService(symbolRepository, symbolOverviewRepository, alphaVantageService, trading212Service)
 	userService := service.NewUserService(userRepository, config)
-	historicalService := service.NewHistoricalService(historicalRepository, symbolRepository, symbolOverviewRepository)
+	historyService := service.NewHistoryService(yahooService, historyRepository, symbolRepository, symbolOverviewRepository)
 
-	symbolsServiceServer := server.NewSymbolsServiceServer(symbolsService)
+	symbolServiceServer := server.NewSymbolServiceServer(symbolService)
 	userServiceServer := server.NewUserServiceServer(userService)
-	historicalServiceServer := server.NewHistoricalServiceServer(historicalService)
+	historyServiceServer := server.NewHistoryServiceServer(historyService)
 
-	err := jobs.ScheduleJobs(symbolsService)
+	err := jobs.ScheduleJobs(symbolService, historyService)
 	if err != nil {
 		return nil, err
 	}
 
-	return grpc_server.NewGRPCServer(ctx, config.GRPCPort, symbolsServiceServer, userServiceServer, historicalServiceServer), nil
+	return grpc_server.NewGRPCServer(ctx, config.GRPCPort, symbolServiceServer, userServiceServer, historyServiceServer), nil
 }
 
 func main() {
