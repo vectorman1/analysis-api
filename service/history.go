@@ -148,7 +148,7 @@ func (s *HistoryService) UpdateAll(ctx context.Context) error {
 	hoursApprox := float32(len(*res) / 2000)
 	grpclog.Infof("[HISTORY JOB] Job will take at least: %.2f hours", hoursApprox)
 
-	for _, sym := range *res {
+	for i, sym := range *res {
 		if sym.MarketName == "NASDAQ" ||
 			sym.MarketName == "NYSE" {
 
@@ -159,19 +159,27 @@ func (s *HistoryService) UpdateAll(ctx context.Context) error {
 			entries, err := s.UpdateSymbolHistory(ctx, u, sym.Identifier)
 			c()
 			if err != nil {
-				grpclog.Errorf("[HISTORY JOB] Failed to update histories at: %s %s %s %s err: %v", sym.Isin, sym.Identifier, sym.Name, sym.MarketName, err)
+				grpclog.Errorf("[HISTORY JOB] (%d/%d) Failed to update histories at: %s %s %s %s err: %v",
+					i+1, len(*res),
+					sym.Isin, sym.Identifier, sym.Name, sym.MarketName, err)
 				continue
 			} else if entries == 0 {
-				grpclog.Infof("[HISTORY JOB] No need to update: %s %s %s %s ", sym.Isin, sym.Identifier, sym.Name, sym.MarketName)
+				grpclog.Infof("[HISTORY JOB] (%d/%d) No need to update: %s %s %s %s ",
+					i+1, len(*res),
+					sym.Isin, sym.Identifier, sym.Name, sym.MarketName)
 				continue
 			}
 
-			grpclog.Infof("[HISTORY JOB] Updated: %s %s %s %s Added entries: %d", sym.Isin, sym.Identifier, sym.Name, sym.MarketName, entries)
+			grpclog.Infof("[HISTORY JOB] (%d/%d) Updated: %s %s %s %s Added entries: %d",
+				i+1, len(*res),
+				sym.Isin, sym.Identifier, sym.Name, sym.MarketName, entries)
 
 			// timeout to avoid throttle
 			time.Sleep(2 * time.Second)
 		} else {
-			grpclog.Infof("[HISTORY JOB] Skipping: ", sym.Isin, sym.Identifier, sym.Name, sym.MarketName)
+			grpclog.Infof("[HISTORY JOB] (%d/%d) Skipping: %s %s %s %s",
+				i+1, len(*res),
+				sym.Isin, sym.Identifier, sym.Name, sym.MarketName)
 		}
 	}
 
