@@ -24,23 +24,25 @@ type historyService interface {
 }
 
 type HistoryService struct {
-	historyService
 	yahooService             *yahoo.YahooService
 	historyRepository        *db.HistoryRepository
 	symbolRepository         *db.SymbolRepository
 	symbolOverviewRepository *db.SymbolOverviewRepository
+	reportService            *ReportService
 }
 
 func NewHistoryService(
 	yahooService *yahoo.YahooService,
 	historicalRepository *db.HistoryRepository,
 	symbolRepository *db.SymbolRepository,
-	symbolOverviewRepository *db.SymbolOverviewRepository) *HistoryService {
+	symbolOverviewRepository *db.SymbolOverviewRepository,
+	reportService *ReportService) *HistoryService {
 	return &HistoryService{
 		yahooService:             yahooService,
 		historyRepository:        historicalRepository,
 		symbolRepository:         symbolRepository,
 		symbolOverviewRepository: symbolOverviewRepository,
+		reportService:            reportService,
 	}
 }
 
@@ -65,15 +67,11 @@ func (s *HistoryService) GetSymbolHistory(ctx context.Context, req *history_serv
 
 func (s *HistoryService) UpdateSymbolHistory(ctx context.Context, symUuid string, identifier string) (int, error) {
 	lastHistory, err := s.historyRepository.GetLastSymbolHistory(ctx, symUuid)
-	if err != nil {
-		return 0, err
-	}
-
 	// handle initial update of symbol
-	if lastHistory == nil {
-		beginningOfTime := time.Unix(0, 0)
+	if err != nil {
+		beginningOfTime := time.Date(2000, 0, 0, 0, 0, 0, 0, time.UTC)
 
-		candles, err := s.yahooService.GetIdentifierHistory(
+		histories, err := s.yahooService.GetIdentifierHistory(
 			symUuid,
 			identifier,
 			beginningOfTime,
@@ -82,7 +80,8 @@ func (s *HistoryService) UpdateSymbolHistory(ctx context.Context, symUuid string
 			return 0, err
 		}
 
-		res, err := s.historyRepository.InsertMany(ctx, candles)
+		*histories = s.reportService.GetTAValues(*histories, len(*histories))
+		res, err := s.historyRepository.InsertMany(ctx, histories)
 		if err != nil {
 			return 0, err
 		}
@@ -90,7 +89,7 @@ func (s *HistoryService) UpdateSymbolHistory(ctx context.Context, symUuid string
 		return res, nil
 	} else {
 		// handle already existing history data
-		// fetch fetch history if last is older than 24h
+		// fetch history if last is older than 24h
 		end := time.Now().UTC()
 		if lastHistory.Timestamp.Add(time.Hour*24).Unix() > end.Unix() {
 			return 0, nil
@@ -106,6 +105,17 @@ func (s *HistoryService) UpdateSymbolHistory(ctx context.Context, symUuid string
 		}
 
 		if len(*candles) > 0 {
+			// get last 150 history entries to pass to calculation method
+			// it does further checks for each type of indicator
+			// - e.g. min. 120 for MA120
+			previous, err := s.historyRepository.GetSymbolHistory(ctx, symUuid, lastHistory.CreatedAt.Add(-(150 * (24 * time.Hour))), time.Now())
+			if err != nil {
+				return 0, err
+			}
+
+			*previous = append(*previous, *candles...)
+			*candles = s.reportService.GetTAValues(*previous, len(*candles))
+
 			res, err := s.historyRepository.InsertMany(ctx, candles)
 			if err != nil {
 				return 0, err
@@ -145,7 +155,7 @@ func (s *HistoryService) UpdateAll(ctx context.Context) error {
 			var u string
 			sym.Uuid.AssignTo(&u)
 
-			ctx, c := context.WithTimeout(ctx, 2*time.Second)
+			ctx, c := context.WithTimeout(ctx, 5*time.Second)
 			entries, err := s.UpdateSymbolHistory(ctx, u, sym.Identifier)
 			c()
 			if err != nil {
