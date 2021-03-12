@@ -49,9 +49,6 @@ func (s *AlphaVantageService) GetSymbolOverview(symbolName string) (*service.Sym
 		return nil, err
 	}
 
-	bodyStr := string(body)
-	println(bodyStr)
-
 	var result *service.SymbolOverview
 	err = json.Unmarshal(body, &result)
 	if err != nil {
