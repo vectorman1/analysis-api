@@ -54,11 +54,22 @@ message GetBySymbolUuidResponse {
   repeated History items = 1;
 }
 
+message StartUpdateJobRequest {
+}
+
+message StartUpdateJobResponse {
+}
+
 service HistoryService {
   rpc GetBySymbolUuid(GetBySymbolUuidRequest) returns (GetBySymbolUuidResponse) {
     option (google.api.http) = {
-      post: "/api/v1/history/{symbolUuid}",
+      post: "/api/v1/histories/{symbolUuid}",
       body: "*"
+    };
+  }
+  rpc StartUpdateJob(StartUpdateJobRequest) returns (StartUpdateJobResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/histories/update",
     };
   }
 }

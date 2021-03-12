@@ -17,8 +17,8 @@ import (
 	"github.com/vectorman1/analysis/analysis-api/generated/symbol_service"
 )
 
-type symbolRepository interface {
-	GetPaged(ctx context.Context, req *symbol_service.ReadPagedSymbolRequest) (*[]entities.Symbol, uint, error)
+type SymbolRepo interface {
+	GetPaged(ctx context.Context, req *symbol_service.ReadPagedRequest) (*[]entities.Symbol, uint, error)
 	GetByUuid(ctx context.Context, uuid string) (*entities.Symbol, error)
 	InsertBulk(tx *pgx.Tx, ctx context.Context, symbols []*entities.Symbol) (bool, error)
 	DeleteBulk(tx *pgx.Tx, ctx context.Context, symbols []*entities.Symbol) (bool, error)
@@ -28,7 +28,6 @@ type symbolRepository interface {
 }
 
 type SymbolRepository struct {
-	symbolRepository
 	db *pgx.ConnPool
 }
 
@@ -39,7 +38,7 @@ func NewSymbolRepository(db *pgx.ConnPool) *SymbolRepository {
 }
 
 // GetPaged returns a paged response of symbols stored
-func (r *SymbolRepository) GetPaged(ctx context.Context, req *symbol_service.ReadPagedSymbolRequest) (*[]entities.Symbol, uint, error) {
+func (r *SymbolRepository) GetPaged(ctx context.Context, req *symbol_service.ReadPagedRequest) (*[]entities.Symbol, uint, error) {
 	// generate query
 	order := common.FormatOrderQuery(req.Filter.Order, req.Filter.Ascending)
 	queryBuilder := squirrel.

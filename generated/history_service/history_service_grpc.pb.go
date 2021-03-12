@@ -4,7 +4,6 @@ package history_service
 
 import (
 	context "context"
-
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -19,6 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type HistoryServiceClient interface {
 	GetBySymbolUuid(ctx context.Context, in *GetBySymbolUuidRequest, opts ...grpc.CallOption) (*GetBySymbolUuidResponse, error)
+	StartUpdateJob(ctx context.Context, in *StartUpdateJobRequest, opts ...grpc.CallOption) (*StartUpdateJobResponse, error)
 }
 
 type historyServiceClient struct {
@@ -31,7 +31,16 @@ func NewHistoryServiceClient(cc grpc.ClientConnInterface) HistoryServiceClient {
 
 func (c *historyServiceClient) GetBySymbolUuid(ctx context.Context, in *GetBySymbolUuidRequest, opts ...grpc.CallOption) (*GetBySymbolUuidResponse, error) {
 	out := new(GetBySymbolUuidResponse)
-	err := c.cc.Invoke(ctx, "/v1.history_service.HistoryService/GetSymbolHistory", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/v1.history_service.HistoryService/GetBySymbolUuid", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *historyServiceClient) StartUpdateJob(ctx context.Context, in *StartUpdateJobRequest, opts ...grpc.CallOption) (*StartUpdateJobResponse, error) {
+	out := new(StartUpdateJobResponse)
+	err := c.cc.Invoke(ctx, "/v1.history_service.HistoryService/StartUpdateJob", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -43,6 +52,7 @@ func (c *historyServiceClient) GetBySymbolUuid(ctx context.Context, in *GetBySym
 // for forward compatibility
 type HistoryServiceServer interface {
 	GetBySymbolUuid(context.Context, *GetBySymbolUuidRequest) (*GetBySymbolUuidResponse, error)
+	StartUpdateJob(context.Context, *StartUpdateJobRequest) (*StartUpdateJobResponse, error)
 	mustEmbedUnimplementedHistoryServiceServer()
 }
 
@@ -51,7 +61,10 @@ type UnimplementedHistoryServiceServer struct {
 }
 
 func (UnimplementedHistoryServiceServer) GetBySymbolUuid(context.Context, *GetBySymbolUuidRequest) (*GetBySymbolUuidResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetSymbolHistory not implemented")
+	return nil, status.Errorf(codes.Unimplemented, "method GetBySymbolUuid not implemented")
+}
+func (UnimplementedHistoryServiceServer) StartUpdateJob(context.Context, *StartUpdateJobRequest) (*StartUpdateJobResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StartUpdateJob not implemented")
 }
 func (UnimplementedHistoryServiceServer) mustEmbedUnimplementedHistoryServiceServer() {}
 
@@ -76,10 +89,28 @@ func _HistoryService_GetBySymbolUuid_Handler(srv interface{}, ctx context.Contex
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/v1.history_service.HistoryService/GetSymbolHistory",
+		FullMethod: "/v1.history_service.HistoryService/GetBySymbolUuid",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(HistoryServiceServer).GetBySymbolUuid(ctx, req.(*GetBySymbolUuidRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HistoryService_StartUpdateJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StartUpdateJobRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HistoryServiceServer).StartUpdateJob(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/v1.history_service.HistoryService/StartUpdateJob",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HistoryServiceServer).StartUpdateJob(ctx, req.(*StartUpdateJobRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -89,8 +120,12 @@ var _HistoryService_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*HistoryServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GetSymbolHistory",
+			MethodName: "GetBySymbolUuid",
 			Handler:    _HistoryService_GetBySymbolUuid_Handler,
+		},
+		{
+			MethodName: "StartUpdateJob",
+			Handler:    _HistoryService_StartUpdateJob_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

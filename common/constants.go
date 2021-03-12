@@ -9,7 +9,7 @@ const SYMBOLS_NAMCESPACE = `53edcce7-94d4-4deb-b2ac-d1f6d8657d8e`
 const MONGO_DB_DATABASE = `analysis`
 const OVERVIEWS_COLLECTION = `overviews`
 const HISTORIES_COLLECTION = `histories`
-const TECHNICALS_COLLECTION = `technicals`
+const REPORTS_COLLECTION = `reports`
 const MaxConcurrency = 2000
 
 func GetAllowedHeaders() []string {

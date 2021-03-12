@@ -4,7 +4,6 @@ package worker_symbol_service
 
 import (
 	context "context"
-
 	proto_models "github.com/vectorman1/analysis/analysis-api/generated/proto_models"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"

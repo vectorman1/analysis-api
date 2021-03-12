@@ -3,6 +3,9 @@ package server
 import (
 	"context"
 
+	"github.com/bamzi/jobrunner"
+	"github.com/vectorman1/analysis/analysis-api/jobs"
+
 	"github.com/vectorman1/analysis/analysis-api/generated/history_service"
 
 	"github.com/vectorman1/analysis/analysis-api/common"
@@ -28,4 +31,10 @@ func (s *HistoryServiceServer) GetBySymbolUuid(ctx context.Context, req *history
 	}
 
 	return res, nil
+}
+
+func (s *HistoryServiceServer) StartUpdateJob(ctx context.Context, req *history_service.StartUpdateJobRequest) (*history_service.StartUpdateJobResponse, error) {
+	jobrunner.Now(jobs.NewHistoryUpdateJob(s.historyService))
+
+	return &history_service.StartUpdateJobResponse{}, nil
 }

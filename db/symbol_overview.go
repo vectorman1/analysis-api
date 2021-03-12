@@ -11,13 +11,12 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type symbolOverviewRepository interface {
+type SymbolOverviewRepo interface {
 	Insert(ctx context.Context, overview *documents.SymbolOverview) (bool, error)
 	GetBySymbolUuid(ctx context.Context, uuid string) (*documents.SymbolOverview, error)
 }
 
 type SymbolOverviewRepository struct {
-	symbolOverviewRepository
 	mondodb *mongo.Database
 }
 

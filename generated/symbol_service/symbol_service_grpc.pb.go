@@ -17,13 +17,9 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type SymbolServiceClient interface {
-	ReadPaged(ctx context.Context, in *ReadPagedSymbolRequest, opts ...grpc.CallOption) (*ReadPagedSymbolResponse, error)
-	Read(ctx context.Context, in *ReadSymbolRequest, opts ...grpc.CallOption) (*ReadSymbolResponse, error)
-	Create(ctx context.Context, in *CreateSymbolRequest, opts ...grpc.CallOption) (*CreateSymbolResponse, error)
-	Update(ctx context.Context, in *UpdateSymbolRequest, opts ...grpc.CallOption) (*UpdateSymbolResponse, error)
-	Delete(ctx context.Context, in *DeleteSymbolRequest, opts ...grpc.CallOption) (*DeleteSymbolResponse, error)
+	ReadPaged(ctx context.Context, in *ReadPagedRequest, opts ...grpc.CallOption) (*ReadPagedResponse, error)
 	Details(ctx context.Context, in *SymbolDetailsRequest, opts ...grpc.CallOption) (*SymbolDetailsResponse, error)
-	Recalculate(ctx context.Context, in *RecalculateSymbolRequest, opts ...grpc.CallOption) (*RecalculateSymbolResponse, error)
+	StartUpdateJob(ctx context.Context, in *StartUpdateJobRequest, opts ...grpc.CallOption) (*StartUpdateJobResponse, error)
 }
 
 type symbolServiceClient struct {
@@ -34,45 +30,9 @@ func NewSymbolServiceClient(cc grpc.ClientConnInterface) SymbolServiceClient {
 	return &symbolServiceClient{cc}
 }
 
-func (c *symbolServiceClient) ReadPaged(ctx context.Context, in *ReadPagedSymbolRequest, opts ...grpc.CallOption) (*ReadPagedSymbolResponse, error) {
-	out := new(ReadPagedSymbolResponse)
+func (c *symbolServiceClient) ReadPaged(ctx context.Context, in *ReadPagedRequest, opts ...grpc.CallOption) (*ReadPagedResponse, error) {
+	out := new(ReadPagedResponse)
 	err := c.cc.Invoke(ctx, "/v1.symbol_service.SymbolService/ReadPaged", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *symbolServiceClient) Read(ctx context.Context, in *ReadSymbolRequest, opts ...grpc.CallOption) (*ReadSymbolResponse, error) {
-	out := new(ReadSymbolResponse)
-	err := c.cc.Invoke(ctx, "/v1.symbol_service.SymbolService/Read", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *symbolServiceClient) Create(ctx context.Context, in *CreateSymbolRequest, opts ...grpc.CallOption) (*CreateSymbolResponse, error) {
-	out := new(CreateSymbolResponse)
-	err := c.cc.Invoke(ctx, "/v1.symbol_service.SymbolService/Create", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *symbolServiceClient) Update(ctx context.Context, in *UpdateSymbolRequest, opts ...grpc.CallOption) (*UpdateSymbolResponse, error) {
-	out := new(UpdateSymbolResponse)
-	err := c.cc.Invoke(ctx, "/v1.symbol_service.SymbolService/Update", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *symbolServiceClient) Delete(ctx context.Context, in *DeleteSymbolRequest, opts ...grpc.CallOption) (*DeleteSymbolResponse, error) {
-	out := new(DeleteSymbolResponse)
-	err := c.cc.Invoke(ctx, "/v1.symbol_service.SymbolService/Delete", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -88,9 +48,9 @@ func (c *symbolServiceClient) Details(ctx context.Context, in *SymbolDetailsRequ
 	return out, nil
 }
 
-func (c *symbolServiceClient) Recalculate(ctx context.Context, in *RecalculateSymbolRequest, opts ...grpc.CallOption) (*RecalculateSymbolResponse, error) {
-	out := new(RecalculateSymbolResponse)
-	err := c.cc.Invoke(ctx, "/v1.symbol_service.SymbolService/Recalculate", in, out, opts...)
+func (c *symbolServiceClient) StartUpdateJob(ctx context.Context, in *StartUpdateJobRequest, opts ...grpc.CallOption) (*StartUpdateJobResponse, error) {
+	out := new(StartUpdateJobResponse)
+	err := c.cc.Invoke(ctx, "/v1.symbol_service.SymbolService/StartUpdateJob", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -101,13 +61,9 @@ func (c *symbolServiceClient) Recalculate(ctx context.Context, in *RecalculateSy
 // All implementations must embed UnimplementedSymbolServiceServer
 // for forward compatibility
 type SymbolServiceServer interface {
-	ReadPaged(context.Context, *ReadPagedSymbolRequest) (*ReadPagedSymbolResponse, error)
-	Read(context.Context, *ReadSymbolRequest) (*ReadSymbolResponse, error)
-	Create(context.Context, *CreateSymbolRequest) (*CreateSymbolResponse, error)
-	Update(context.Context, *UpdateSymbolRequest) (*UpdateSymbolResponse, error)
-	Delete(context.Context, *DeleteSymbolRequest) (*DeleteSymbolResponse, error)
+	ReadPaged(context.Context, *ReadPagedRequest) (*ReadPagedResponse, error)
 	Details(context.Context, *SymbolDetailsRequest) (*SymbolDetailsResponse, error)
-	Recalculate(context.Context, *RecalculateSymbolRequest) (*RecalculateSymbolResponse, error)
+	StartUpdateJob(context.Context, *StartUpdateJobRequest) (*StartUpdateJobResponse, error)
 	mustEmbedUnimplementedSymbolServiceServer()
 }
 
@@ -115,26 +71,14 @@ type SymbolServiceServer interface {
 type UnimplementedSymbolServiceServer struct {
 }
 
-func (UnimplementedSymbolServiceServer) ReadPaged(context.Context, *ReadPagedSymbolRequest) (*ReadPagedSymbolResponse, error) {
+func (UnimplementedSymbolServiceServer) ReadPaged(context.Context, *ReadPagedRequest) (*ReadPagedResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReadPaged not implemented")
-}
-func (UnimplementedSymbolServiceServer) Read(context.Context, *ReadSymbolRequest) (*ReadSymbolResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Read not implemented")
-}
-func (UnimplementedSymbolServiceServer) Create(context.Context, *CreateSymbolRequest) (*CreateSymbolResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
-}
-func (UnimplementedSymbolServiceServer) Update(context.Context, *UpdateSymbolRequest) (*UpdateSymbolResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Update not implemented")
-}
-func (UnimplementedSymbolServiceServer) Delete(context.Context, *DeleteSymbolRequest) (*DeleteSymbolResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
 }
 func (UnimplementedSymbolServiceServer) Details(context.Context, *SymbolDetailsRequest) (*SymbolDetailsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Details not implemented")
 }
-func (UnimplementedSymbolServiceServer) Recalculate(context.Context, *RecalculateSymbolRequest) (*RecalculateSymbolResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Recalculate not implemented")
+func (UnimplementedSymbolServiceServer) StartUpdateJob(context.Context, *StartUpdateJobRequest) (*StartUpdateJobResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StartUpdateJob not implemented")
 }
 func (UnimplementedSymbolServiceServer) mustEmbedUnimplementedSymbolServiceServer() {}
 
@@ -150,7 +94,7 @@ func RegisterSymbolServiceServer(s *grpc.Server, srv SymbolServiceServer) {
 }
 
 func _SymbolService_ReadPaged_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ReadPagedSymbolRequest)
+	in := new(ReadPagedRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -162,79 +106,7 @@ func _SymbolService_ReadPaged_Handler(srv interface{}, ctx context.Context, dec 
 		FullMethod: "/v1.symbol_service.SymbolService/ReadPaged",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SymbolServiceServer).ReadPaged(ctx, req.(*ReadPagedSymbolRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SymbolService_Read_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ReadSymbolRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SymbolServiceServer).Read(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/v1.symbol_service.SymbolService/Read",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SymbolServiceServer).Read(ctx, req.(*ReadSymbolRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SymbolService_Create_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateSymbolRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SymbolServiceServer).Create(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/v1.symbol_service.SymbolService/Create",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SymbolServiceServer).Create(ctx, req.(*CreateSymbolRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SymbolService_Update_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateSymbolRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SymbolServiceServer).Update(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/v1.symbol_service.SymbolService/Update",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SymbolServiceServer).Update(ctx, req.(*UpdateSymbolRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SymbolService_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteSymbolRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SymbolServiceServer).Delete(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/v1.symbol_service.SymbolService/Delete",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SymbolServiceServer).Delete(ctx, req.(*DeleteSymbolRequest))
+		return srv.(SymbolServiceServer).ReadPaged(ctx, req.(*ReadPagedRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -257,20 +129,20 @@ func _SymbolService_Details_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SymbolService_Recalculate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RecalculateSymbolRequest)
+func _SymbolService_StartUpdateJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StartUpdateJobRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SymbolServiceServer).Recalculate(ctx, in)
+		return srv.(SymbolServiceServer).StartUpdateJob(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/v1.symbol_service.SymbolService/Recalculate",
+		FullMethod: "/v1.symbol_service.SymbolService/StartUpdateJob",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SymbolServiceServer).Recalculate(ctx, req.(*RecalculateSymbolRequest))
+		return srv.(SymbolServiceServer).StartUpdateJob(ctx, req.(*StartUpdateJobRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -284,28 +156,12 @@ var _SymbolService_serviceDesc = grpc.ServiceDesc{
 			Handler:    _SymbolService_ReadPaged_Handler,
 		},
 		{
-			MethodName: "Read",
-			Handler:    _SymbolService_Read_Handler,
-		},
-		{
-			MethodName: "Create",
-			Handler:    _SymbolService_Create_Handler,
-		},
-		{
-			MethodName: "Update",
-			Handler:    _SymbolService_Update_Handler,
-		},
-		{
-			MethodName: "Delete",
-			Handler:    _SymbolService_Delete_Handler,
-		},
-		{
 			MethodName: "Details",
 			Handler:    _SymbolService_Details_Handler,
 		},
 		{
-			MethodName: "Recalculate",
-			Handler:    _SymbolService_Recalculate_Handler,
+			MethodName: "StartUpdateJob",
+			Handler:    _SymbolService_StartUpdateJob_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
