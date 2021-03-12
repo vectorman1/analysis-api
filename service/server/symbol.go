@@ -4,13 +4,13 @@ import (
 	"context"
 	"time"
 
+	"github.com/bamzi/jobrunner"
+	"github.com/vectorman1/analysis/analysis-api/jobs"
+
 	"github.com/vectorman1/analysis/analysis-api/generated/symbol_service"
 	"github.com/vectorman1/analysis/analysis-api/service"
 
 	"github.com/vectorman1/analysis/analysis-api/common"
-
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type SymbolsServiceServer struct {
@@ -26,7 +26,7 @@ func NewSymbolServiceServer(
 	}
 }
 
-func (s *SymbolsServiceServer) ReadPaged(ctx context.Context, req *symbol_service.ReadPagedSymbolRequest) (*symbol_service.ReadPagedSymbolResponse, error) {
+func (s *SymbolsServiceServer) ReadPaged(ctx context.Context, req *symbol_service.ReadPagedRequest) (*symbol_service.ReadPagedResponse, error) {
 	timeoutContext, c := context.WithTimeout(ctx, 5*time.Second)
 	defer c()
 
@@ -35,27 +35,11 @@ func (s *SymbolsServiceServer) ReadPaged(ctx context.Context, req *symbol_servic
 		return nil, common.GetErrorStatus(err)
 	}
 
-	resp := &symbol_service.ReadPagedSymbolResponse{
+	resp := &symbol_service.ReadPagedResponse{
 		Items:      *res,
 		TotalItems: uint64(totalItemsCount),
 	}
 	return resp, nil
-}
-
-func (s *SymbolsServiceServer) Read(ctx context.Context, req *symbol_service.ReadSymbolRequest) (*symbol_service.ReadSymbolResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Read not implemented")
-}
-
-func (s *SymbolsServiceServer) Create(ctx context.Context, req *symbol_service.CreateSymbolRequest) (*symbol_service.CreateSymbolResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
-}
-
-func (s *SymbolsServiceServer) Update(ctx context.Context, req *symbol_service.UpdateSymbolRequest) (*symbol_service.UpdateSymbolResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Update not implemented")
-}
-
-func (s *SymbolsServiceServer) Delete(ctx context.Context, req *symbol_service.DeleteSymbolRequest) (*symbol_service.DeleteSymbolResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Update not implemented")
 }
 
 func (s *SymbolsServiceServer) Details(ctx context.Context, req *symbol_service.SymbolDetailsRequest) (*symbol_service.SymbolDetailsResponse, error) {
@@ -67,10 +51,8 @@ func (s *SymbolsServiceServer) Details(ctx context.Context, req *symbol_service.
 	return res, nil
 }
 
-func (s *SymbolsServiceServer) Recalculate(ctx context.Context, req *symbol_service.RecalculateSymbolRequest) (*symbol_service.RecalculateSymbolResponse, error) {
-	res, err := s.symbolService.Recalculate(ctx)
-	if err != nil {
-		return nil, common.GetErrorStatus(err)
-	}
-	return res, nil
+func (s *SymbolsServiceServer) StartUpdateJob(ctx context.Context, req *symbol_service.StartUpdateJobRequest) (*symbol_service.StartUpdateJobResponse, error) {
+	jobrunner.Now(jobs.NewSymbolUpdateJob(s.symbolService))
+
+	return &symbol_service.StartUpdateJobResponse{}, nil
 }
