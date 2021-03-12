@@ -44,12 +44,12 @@ func (s *YahooService) GetIdentifierHistory(symUuid string, identifier string, s
 
 		result = append(result, documents.History{
 			SymbolUuid: symUuid,
-			Open:       float32(open),
-			Close:      float32(cl),
-			High:       float32(high),
-			Low:        float32(low),
+			Open:       open,
+			Close:      cl,
+			High:       high,
+			Low:        low,
 			Volume:     int64(bar.Volume),
-			AdjClose:   float32(adjClose),
+			AdjClose:   adjClose,
 			Timestamp:  timestamp,
 			CreatedAt:  time.Now(),
 		})
