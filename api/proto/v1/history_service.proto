@@ -70,7 +70,6 @@ service HistoryService {
   rpc StartUpdateJob(StartUpdateJobRequest) returns (StartUpdateJobResponse) {
     option (google.api.http) = {
       post: "/api/v1/histories/update",
-      body: "*"
     };
   }
 }
