@@ -109,9 +109,10 @@ func initializeServices(ctx context.Context, pgConnPool *pgx.ConnPool, mongoData
 	alphaVantageService := alpha_vantage.NewAlphaVantageService(config)
 	yahooService := yahoo.NewYahooService()
 
+	reportService := service.NewReportService()
 	symbolService := service.NewSymbolService(symbolRepository, symbolOverviewRepository, alphaVantageService, trading212Service)
 	userService := service.NewUserService(userRepository, config)
-	historyService := service.NewHistoryService(yahooService, historyRepository, symbolRepository, symbolOverviewRepository)
+	historyService := service.NewHistoryService(yahooService, historyRepository, symbolRepository, symbolOverviewRepository, reportService)
 
 	symbolServiceServer := server.NewSymbolServiceServer(symbolService)
 	userServiceServer := server.NewUserServiceServer(userService)
