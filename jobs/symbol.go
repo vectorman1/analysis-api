@@ -13,6 +13,10 @@ type SymbolRecalculationJob struct {
 	symbolService *service.SymbolService
 }
 
+func NewSymbolUpdateJob(symbolService *service.SymbolService) *SymbolRecalculationJob {
+	return &SymbolRecalculationJob{symbolService: symbolService}
+}
+
 func (j SymbolRecalculationJob) Run() {
 	grpclog.Infoln("[SYMBOL JOB] Starting recalculation job")
 	ctx, c := context.WithTimeout(context.Background(), 10*time.Second)
