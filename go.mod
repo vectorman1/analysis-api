@@ -19,9 +19,12 @@ require (
 	github.com/lib/pq v1.9.0 // indirect
 	github.com/piquette/finance-go v1.0.0
 	github.com/rs/zerolog v1.20.0
+	github.com/sdcoffey/big v0.7.0
+	github.com/sdcoffey/techan v0.12.0
 	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/streadway/amqp v1.0.0
 	go.mongodb.org/mongo-driver v1.5.0
+	go.oneofone.dev/ta v0.0.7
 	go.uber.org/zap v1.16.0
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 	golang.org/x/net v0.0.0-20200822124328-c89045814202

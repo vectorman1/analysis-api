@@ -34,14 +34,14 @@ option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
 };
 
 message History {
-  float open = 1;
-  float close = 2;
-  float high = 3;
-  float low = 4;
+  double open = 1;
+  double close = 2;
+  double high = 3;
+  double low = 4;
   int64 volume = 5;
   google.protobuf.Timestamp timestamp = 6;
   google.protobuf.Timestamp createdAt = 7;
-  float adjClose = 8;
+  double adjClose = 8;
 }
 
 message GetBySymbolUuidRequest {
