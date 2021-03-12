@@ -92,7 +92,7 @@ func (s *SymbolService) Details(ctx context.Context, req *symbol_service.SymbolD
 	}
 
 	overview, err := s.symbolOverviewRepository.GetBySymbolUuid(ctx, req.Uuid)
-	if err != nil {
+	if err != nil || overview.ShouldUpdate() {
 		extOverview, err := s.alphaVantageService.GetSymbolOverview(symbol.Identifier)
 		if err != nil {
 			return nil, err
@@ -107,7 +107,6 @@ func (s *SymbolService) Details(ctx context.Context, req *symbol_service.SymbolD
 		if err != nil {
 			return nil, err
 		}
-
 		overview = newOverview
 	}
 

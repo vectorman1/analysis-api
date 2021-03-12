@@ -64,6 +64,10 @@ type SymbolOverview struct {
 	UpdatedAt                  time.Time
 }
 
+func (s *SymbolOverview) ShouldUpdate() bool {
+	return time.Since(s.UpdatedAt) > 7*(24*time.Hour)
+}
+
 func (s *SymbolOverview) ToProto() *symbol_service.SymbolOverview {
 	latestQuarter, _ := ptypes.TimestampProto(s.LatestQuarter)
 	updatedAt, _ := ptypes.TimestampProto(s.UpdatedAt)
