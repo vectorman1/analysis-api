@@ -42,29 +42,29 @@ message SymbolFilter {
   string text = 5;
 }
 
-message ReadPagedSymbolRequest {
+message ReadPagedRequest {
   SymbolFilter filter = 1;
 }
 
-message ReadPagedSymbolResponse {
+message ReadPagedResponse {
   repeated v1.Symbol items = 1;
   uint64 totalItems = 2;
 }
 
 // can get symbols either by ID or Identifier + ISIN
-message ReadSymbolRequest {
+message ReadRequest {
   uint64 id = 1;
 }
 
-message ReadSymbolResponse {
+message ReadResponse {
   v1.Symbol symbol = 1;
 }
 
-message UpdateSymbolRequest {
+message UpdateRequest {
   v1.Symbol symbol = 1;
 }
 
-message UpdateSymbolResponse {
+message UpdateResponse {
   enum status {
     FAILED = 0;
     SUCCESS = 1;
@@ -82,11 +82,11 @@ message DeleteSymbolResponse {
   }
 }
 
-message CreateSymbolRequest {
+message CreateRequest {
   v1.Symbol symbol = 1;
 }
 
-message CreateSymbolResponse {
+message CreateResponse {
   uint64 id = 1;
 }
 
@@ -100,7 +100,10 @@ message PopulateSymbolResponse {
   }
 }
 
-message RecalculateSymbolRequest {
+message StartUpdateJobRequest {
+}
+
+message StartUpdateJobResponse {
 }
 
 message RecalculateSymbolResponse {
@@ -177,32 +180,10 @@ message SymbolDetailsResponse {
 }
 
 service SymbolService {
-  rpc ReadPaged (ReadPagedSymbolRequest) returns (ReadPagedSymbolResponse) {
+  rpc ReadPaged (ReadPagedRequest) returns (ReadPagedResponse) {
     option (google.api.http) = {
       post: "/api/v1/symbols/paged",
       body: "*"
-    };
-  }
-  rpc Read (ReadSymbolRequest) returns (ReadSymbolResponse) {
-    option (google.api.http) = {
-      get: "/api/v1/symbols/{id}",
-    };
-  }
-  rpc Create (CreateSymbolRequest) returns (CreateSymbolResponse) {
-    option (google.api.http) = {
-      post: "/api/v1/symbols",
-      body: "*"
-    };
-  }
-  rpc Update (UpdateSymbolRequest) returns (UpdateSymbolResponse) {
-    option (google.api.http) = {
-      patch: "/api/v1/symbols/{symbol.id}",
-      body: "*",
-    };
-  }
-  rpc Delete (DeleteSymbolRequest) returns (DeleteSymbolResponse) {
-    option (google.api.http) = {
-      delete: "/api/v1/symbols/{id}"
     };
   }
   rpc Details (SymbolDetailsRequest) returns (SymbolDetailsResponse) {
@@ -210,9 +191,9 @@ service SymbolService {
       get: "/api/v1/symbols/{uuid}/details"
     };
   }
-  rpc Recalculate (RecalculateSymbolRequest) returns (RecalculateSymbolResponse) {
+  rpc StartUpdateJob (StartUpdateJobRequest) returns (StartUpdateJobResponse) {
     option (google.api.http) = {
-      post: "/api/v1/symbols/recalculate",
+      post: "/api/v1/symbols/update",
     };
   }
 }
