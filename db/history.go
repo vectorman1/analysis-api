@@ -93,8 +93,11 @@ func (r *HistoryRepository) GetLastSymbolHistory(ctx context.Context, symbolUuid
 	}
 
 	var res documents.History
-	_ = r.mongodb.Collection(common.HISTORIES_COLLECTION).
+	err := r.mongodb.Collection(common.HISTORIES_COLLECTION).
 		FindOne(ctx, filter, opts).Decode(&res)
+	if err != nil {
+		return nil, err
+	}
 
 	return &res, nil
 }
