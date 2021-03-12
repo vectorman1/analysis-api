@@ -13,8 +13,6 @@ import (
 	"github.com/vectorman1/analysis/analysis-api/third_party/alpha_vantage"
 	"github.com/vectorman1/analysis/analysis-api/third_party/trading_212"
 
-	"github.com/vectorman1/analysis/analysis-api/jobs"
-
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -118,11 +116,6 @@ func initializeServices(ctx context.Context, pgConnPool *pgx.ConnPool, mongoData
 	symbolServiceServer := server.NewSymbolServiceServer(symbolService)
 	userServiceServer := server.NewUserServiceServer(userService)
 	historyServiceServer := server.NewHistoryServiceServer(historyService)
-
-	err := jobs.ScheduleJobs(symbolService, historyService)
-	if err != nil {
-		return nil, err
-	}
 
 	return grpc_server.NewGRPCServer(ctx, config.GRPCPort, symbolServiceServer, userServiceServer, historyServiceServer), nil
 }
