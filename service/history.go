@@ -4,6 +4,10 @@ import (
 	"context"
 	"time"
 
+	"google.golang.org/grpc/grpclog"
+
+	"github.com/vectorman1/analysis/analysis-api/generated/symbol_service"
+
 	"github.com/vectorman1/analysis/analysis-api/generated/history_service"
 
 	"github.com/vectorman1/analysis/analysis-api/third_party/yahoo"
@@ -78,7 +82,7 @@ func (s *HistoryService) UpdateSymbolHistory(ctx context.Context, symUuid string
 			return 0, err
 		}
 
-		res, err := s.historyRepository.InsertMany(ctx, *candles)
+		res, err := s.historyRepository.InsertMany(ctx, candles)
 		if err != nil {
 			return 0, err
 		}
@@ -102,7 +106,7 @@ func (s *HistoryService) UpdateSymbolHistory(ctx context.Context, symUuid string
 		}
 
 		if len(*candles) > 0 {
-			res, err := s.historyRepository.InsertMany(ctx, *candles)
+			res, err := s.historyRepository.InsertMany(ctx, candles)
 			if err != nil {
 				return 0, err
 			}
@@ -112,4 +116,54 @@ func (s *HistoryService) UpdateSymbolHistory(ctx context.Context, symUuid string
 	}
 
 	return 0, nil
+}
+
+func (s *HistoryService) UpdateAll(ctx context.Context) error {
+	res, _, err := s.symbolRepository.GetPaged(
+		context.Background(),
+		&symbol_service.ReadPagedRequest{
+			Filter: &symbol_service.SymbolFilter{
+				PageSize:   100000,
+				PageNumber: 1,
+				Order:      "identifier",
+				Ascending:  true,
+			},
+		})
+	if err != nil {
+		return err
+	}
+
+	grpclog.Infoln("[HISTORY JOB] Length of symbols to update: ", len(*res))
+
+	hoursApprox := float32(len(*res) / 2000)
+	grpclog.Infof("[HISTORY JOB] Job will take at least: %.2f hours", hoursApprox)
+
+	for _, sym := range *res {
+		if sym.MarketName == "NASDAQ" ||
+			sym.MarketName == "NYSE" {
+
+			var u string
+			sym.Uuid.AssignTo(&u)
+
+			ctx, c := context.WithTimeout(ctx, 2*time.Second)
+			entries, err := s.UpdateSymbolHistory(ctx, u, sym.Identifier)
+			c()
+			if err != nil {
+				grpclog.Errorf("[HISTORY JOB] Failed to update histories at: %s %s %s %s err: %v", sym.Isin, sym.Identifier, sym.Name, sym.MarketName, err)
+				continue
+			} else if entries == 0 {
+				grpclog.Infof("[HISTORY JOB] No need to update: %s %s %s %s ", sym.Isin, sym.Identifier, sym.Name, sym.MarketName)
+				continue
+			}
+
+			grpclog.Infof("[HISTORY JOB] Updated: %s %s %s %s Added entries: %d", sym.Isin, sym.Identifier, sym.Name, sym.MarketName, entries)
+
+			// timeout to avoid throttle
+			time.Sleep(2 * time.Second)
+		} else {
+			grpclog.Infof("[HISTORY JOB] Skipping: ", sym.Isin, sym.Identifier, sym.Name, sym.MarketName)
+		}
+	}
+
+	return nil
 }
