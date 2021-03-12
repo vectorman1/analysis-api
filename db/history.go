@@ -31,9 +31,9 @@ func NewHistoryRepository(mongodb *mongo.Database) *HistoryRepository {
 	}
 }
 
-func (r *HistoryRepository) InsertMany(ctx context.Context, list []documents.History) (int, error) {
+func (r *HistoryRepository) InsertMany(ctx context.Context, list *[]documents.History) (int, error) {
 	var e []interface{}
-	for _, v := range list {
+	for _, v := range *list {
 		e = append(e, v)
 	}
 
