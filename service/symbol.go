@@ -28,7 +28,7 @@ import (
 
 type symbolService interface {
 	// repo methods
-	GetPaged(ctx context.Context, req *symbol_service.ReadPagedSymbolRequest) (*[]*proto_models.Symbol, uint, error)
+	GetPaged(ctx context.Context, req *symbol_service.ReadPagedRequest) (*[]*proto_models.Symbol, uint, error)
 	Details(ctx context.Context, req *symbol_service.SymbolDetailsRequest) (*symbol_service.SymbolDetailsResponse, error)
 
 	// service methods
@@ -40,7 +40,6 @@ type symbolService interface {
 }
 
 type SymbolService struct {
-	symbolService
 	symbolRepository         *db.SymbolRepository
 	symbolOverviewRepository *db.SymbolOverviewRepository
 	alphaVantageService      *alpha_vantage.AlphaVantageService
@@ -60,7 +59,7 @@ func NewSymbolService(
 	}
 }
 
-func (s *SymbolService) GetPaged(ctx context.Context, req *symbol_service.ReadPagedSymbolRequest) (*[]*proto_models.Symbol, uint, error) {
+func (s *SymbolService) GetPaged(ctx context.Context, req *symbol_service.ReadPagedRequest) (*[]*proto_models.Symbol, uint, error) {
 	if req.Filter == nil {
 		return nil, 0, status.Errorf(codes.InvalidArgument, "provide filter")
 	}
@@ -119,7 +118,7 @@ func (s *SymbolService) Details(ctx context.Context, req *symbol_service.SymbolD
 }
 
 func (s *SymbolService) Recalculate(ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error) {
-	oldSymbols, _, err := s.GetPaged(ctx, &symbol_service.ReadPagedSymbolRequest{
+	oldSymbols, _, err := s.GetPaged(ctx, &symbol_service.ReadPagedRequest{
 		Filter: &symbol_service.SymbolFilter{
 			PageSize:   100000,
 			PageNumber: 1,
