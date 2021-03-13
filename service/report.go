@@ -21,6 +21,8 @@ func NewReportService() *ReportService {
 	return &ReportService{}
 }
 
+// GetTAValues calculates the respective TA values of the histories and returns
+// a sub-slice with len newLen, starting from the end.
 func (s *ReportService) GetTAValues(histories []documents.History, newLen int) []documents.History {
 	historiesLen := len(histories)
 	if historiesLen < 5 {
