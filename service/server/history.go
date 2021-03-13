@@ -38,3 +38,12 @@ func (s *HistoryServiceServer) StartUpdateJob(ctx context.Context, req *history_
 
 	return &history_service.StartUpdateJobResponse{}, nil
 }
+
+func (s *HistoryServiceServer) GetChartBySymbolUuid(ctx context.Context, req *history_service.GetChartBySymbolUuidRequest) (*history_service.GetChartBySymbolUuidResponse, error) {
+	res, err := s.historyService.GetChartBySymbolUuid(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
