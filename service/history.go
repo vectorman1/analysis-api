@@ -21,6 +21,8 @@ import (
 type historyService interface {
 	GetSymbolHistory(ctx context.Context, req *history_service.GetBySymbolUuidRequest) (*history_service.GetBySymbolUuidResponse, error)
 	UpdateSymbolHistory(ctx context.Context, symUuid string, identifier string) (int, error)
+	GetChartBySymbolUuid(ctx context.Context, req *history_service.GetChartBySymbolUuidRequest) (*history_service.GetChartBySymbolUuidResponse, error)
+	UpdateAll(ctx context.Context) error
 }
 
 type HistoryService struct {
@@ -71,6 +73,7 @@ func (s *HistoryService) UpdateSymbolHistory(ctx context.Context, symUuid string
 	if err != nil {
 		beginningOfTime := time.Date(2000, 0, 0, 0, 0, 0, 0, time.UTC)
 
+		// get history from Yahoo
 		histories, err := s.yahooService.GetIdentifierHistory(
 			symUuid,
 			identifier,
@@ -80,6 +83,7 @@ func (s *HistoryService) UpdateSymbolHistory(ctx context.Context, symUuid string
 			return 0, err
 		}
 
+		// set Technical Analysis values based on histories
 		*histories = s.reportService.GetTAValues(*histories, len(*histories))
 		res, err := s.historyRepository.InsertMany(ctx, histories)
 		if err != nil {
@@ -95,6 +99,7 @@ func (s *HistoryService) UpdateSymbolHistory(ctx context.Context, symUuid string
 			return 0, nil
 		}
 
+		// get symbol history from (last + 24h) until now
 		candles, err := s.yahooService.GetIdentifierHistory(
 			symUuid,
 			identifier,
@@ -113,6 +118,8 @@ func (s *HistoryService) UpdateSymbolHistory(ctx context.Context, symUuid string
 				return 0, err
 			}
 
+			// pass the new and old history for the calculation
+			// the method returns only the difference
 			*previous = append(*previous, *candles...)
 			*candles = s.reportService.GetTAValues(*previous, len(*candles))
 
@@ -126,6 +133,34 @@ func (s *HistoryService) UpdateSymbolHistory(ctx context.Context, symUuid string
 	}
 
 	return 0, nil
+}
+
+func (s *HistoryService) GetChartBySymbolUuid(ctx context.Context, req *history_service.GetChartBySymbolUuidRequest) (*history_service.GetChartBySymbolUuidResponse, error) {
+	if !req.StartDate.IsValid() || !req.EndDate.IsValid() {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid date")
+	}
+
+	histories, err := s.historyRepository.GetSymbolHistory(ctx, req.SymbolUuid, req.StartDate.AsTime(), req.EndDate.AsTime())
+	if err != nil {
+		return nil, err
+	}
+
+	var res history_service.GetChartBySymbolUuidResponse
+	for _, h := range *histories {
+		var values []float64
+		// close open low high
+		values = append(values, h.Close)
+		values = append(values, h.Open)
+		values = append(values, h.Low)
+		values = append(values, h.High)
+
+		res.Value = append(res.Value, &history_service.ChartValue{
+			Date:   h.Timestamp.Format("2006-01-02"),
+			Values: values,
+		})
+	}
+
+	return &res, nil
 }
 
 func (s *HistoryService) UpdateAll(ctx context.Context) error {
@@ -149,12 +184,12 @@ func (s *HistoryService) UpdateAll(ctx context.Context) error {
 	grpclog.Infof("[HISTORY JOB] Job will take at least: %.2f hours", hoursApprox)
 
 	for i, sym := range *res {
+		// only update symbol history for these markets
 		if sym.MarketName == "NASDAQ" ||
 			sym.MarketName == "NYSE" {
 
 			var u string
 			sym.Uuid.AssignTo(&u)
-
 			ctx, c := context.WithTimeout(ctx, 5*time.Second)
 			entries, err := s.UpdateSymbolHistory(ctx, u, sym.Identifier)
 			c()

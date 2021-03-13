@@ -60,10 +60,31 @@ message StartUpdateJobRequest {
 message StartUpdateJobResponse {
 }
 
+message GetChartBySymbolUuidRequest {
+  string symbolUuid = 1;
+  google.protobuf.Timestamp startDate = 2;
+  google.protobuf.Timestamp endDate = 3;
+}
+
+message GetChartBySymbolUuidResponse {
+  repeated ChartValue value = 1;
+}
+
+message ChartValue {
+  string date = 1;
+  repeated double values = 2;
+}
+
 service HistoryService {
   rpc GetBySymbolUuid(GetBySymbolUuidRequest) returns (GetBySymbolUuidResponse) {
     option (google.api.http) = {
       post: "/api/v1/histories/{symbolUuid}",
+      body: "*"
+    };
+  }
+  rpc GetChartBySymbolUuid(GetChartBySymbolUuidRequest) returns (GetChartBySymbolUuidResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/histories/{symbolUuid}/chart",
       body: "*"
     };
   }

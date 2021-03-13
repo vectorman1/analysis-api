@@ -18,6 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type HistoryServiceClient interface {
 	GetBySymbolUuid(ctx context.Context, in *GetBySymbolUuidRequest, opts ...grpc.CallOption) (*GetBySymbolUuidResponse, error)
+	GetChartBySymbolUuid(ctx context.Context, in *GetChartBySymbolUuidRequest, opts ...grpc.CallOption) (*GetChartBySymbolUuidResponse, error)
 	StartUpdateJob(ctx context.Context, in *StartUpdateJobRequest, opts ...grpc.CallOption) (*StartUpdateJobResponse, error)
 }
 
@@ -38,6 +39,15 @@ func (c *historyServiceClient) GetBySymbolUuid(ctx context.Context, in *GetBySym
 	return out, nil
 }
 
+func (c *historyServiceClient) GetChartBySymbolUuid(ctx context.Context, in *GetChartBySymbolUuidRequest, opts ...grpc.CallOption) (*GetChartBySymbolUuidResponse, error) {
+	out := new(GetChartBySymbolUuidResponse)
+	err := c.cc.Invoke(ctx, "/v1.history_service.HistoryService/GetChartBySymbolUuid", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *historyServiceClient) StartUpdateJob(ctx context.Context, in *StartUpdateJobRequest, opts ...grpc.CallOption) (*StartUpdateJobResponse, error) {
 	out := new(StartUpdateJobResponse)
 	err := c.cc.Invoke(ctx, "/v1.history_service.HistoryService/StartUpdateJob", in, out, opts...)
@@ -52,6 +62,7 @@ func (c *historyServiceClient) StartUpdateJob(ctx context.Context, in *StartUpda
 // for forward compatibility
 type HistoryServiceServer interface {
 	GetBySymbolUuid(context.Context, *GetBySymbolUuidRequest) (*GetBySymbolUuidResponse, error)
+	GetChartBySymbolUuid(context.Context, *GetChartBySymbolUuidRequest) (*GetChartBySymbolUuidResponse, error)
 	StartUpdateJob(context.Context, *StartUpdateJobRequest) (*StartUpdateJobResponse, error)
 	mustEmbedUnimplementedHistoryServiceServer()
 }
@@ -62,6 +73,9 @@ type UnimplementedHistoryServiceServer struct {
 
 func (UnimplementedHistoryServiceServer) GetBySymbolUuid(context.Context, *GetBySymbolUuidRequest) (*GetBySymbolUuidResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBySymbolUuid not implemented")
+}
+func (UnimplementedHistoryServiceServer) GetChartBySymbolUuid(context.Context, *GetChartBySymbolUuidRequest) (*GetChartBySymbolUuidResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetChartBySymbolUuid not implemented")
 }
 func (UnimplementedHistoryServiceServer) StartUpdateJob(context.Context, *StartUpdateJobRequest) (*StartUpdateJobResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StartUpdateJob not implemented")
@@ -97,6 +111,24 @@ func _HistoryService_GetBySymbolUuid_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _HistoryService_GetChartBySymbolUuid_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetChartBySymbolUuidRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HistoryServiceServer).GetChartBySymbolUuid(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/v1.history_service.HistoryService/GetChartBySymbolUuid",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HistoryServiceServer).GetChartBySymbolUuid(ctx, req.(*GetChartBySymbolUuidRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _HistoryService_StartUpdateJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(StartUpdateJobRequest)
 	if err := dec(in); err != nil {
@@ -122,6 +154,10 @@ var _HistoryService_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetBySymbolUuid",
 			Handler:    _HistoryService_GetBySymbolUuid_Handler,
+		},
+		{
+			MethodName: "GetChartBySymbolUuid",
+			Handler:    _HistoryService_GetChartBySymbolUuid_Handler,
 		},
 		{
 			MethodName: "StartUpdateJob",
