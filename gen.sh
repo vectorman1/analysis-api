@@ -74,7 +74,7 @@ protoc -I . --proto_path=api/proto/v1 \
             --proto_path=third_party \
             --openapiv2_out ./api/swagger/v1 \
             --openapiv2_opt logtostderr=true \
-             history_service.proto
+            history_service.proto
 
 protoc -I . --proto_path=api/proto/v1 \
             --proto_path=third_party \

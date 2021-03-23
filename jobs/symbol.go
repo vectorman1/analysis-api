@@ -19,7 +19,7 @@ func NewSymbolUpdateJob(symbolService *service.SymbolService) *SymbolRecalculati
 
 func (j SymbolRecalculationJob) Run() {
 	grpclog.Infoln("[SYMBOL JOB] Starting recalculation job")
-	ctx, c := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, c := context.WithTimeout(context.Background(), 30*time.Second)
 	defer c()
 
 	res, err := j.symbolService.Recalculate(ctx)

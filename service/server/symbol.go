@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/vectorman1/analysis/analysis-api/generated/proto_models"
+
 	"github.com/bamzi/jobrunner"
 	"github.com/vectorman1/analysis/analysis-api/jobs"
 
@@ -26,6 +28,10 @@ func NewSymbolServiceServer(
 	}
 }
 
+func (s *SymbolsServiceServer) Get(ctx context.Context, req *symbol_service.SymbolRequest) (*proto_models.Symbol, error) {
+	return s.symbolService.Get(ctx, req.Uuid)
+}
+
 func (s *SymbolsServiceServer) ReadPaged(ctx context.Context, req *symbol_service.ReadPagedRequest) (*symbol_service.ReadPagedResponse, error) {
 	timeoutContext, c := context.WithTimeout(ctx, 5*time.Second)
 	defer c()
@@ -42,8 +48,8 @@ func (s *SymbolsServiceServer) ReadPaged(ctx context.Context, req *symbol_servic
 	return resp, nil
 }
 
-func (s *SymbolsServiceServer) Details(ctx context.Context, req *symbol_service.SymbolDetailsRequest) (*symbol_service.SymbolDetailsResponse, error) {
-	res, err := s.symbolService.Details(ctx, req)
+func (s *SymbolsServiceServer) Overview(ctx context.Context, req *symbol_service.SymbolOverviewRequest) (*symbol_service.SymbolOverview, error) {
+	res, err := s.symbolService.Overview(ctx, req)
 	if err != nil {
 		return nil, common.GetErrorStatus(err)
 	}

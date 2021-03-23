@@ -40,6 +40,10 @@ type Trend struct {
 	Trend120 float64
 }
 
+type LastHistory struct {
+	Timestamp time.Time
+}
+
 type History struct {
 	SymbolUuid string
 	Calculated bool

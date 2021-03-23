@@ -28,8 +28,9 @@ import (
 
 type symbolService interface {
 	// repo methods
+	Get(ctx context.Context, uuid string) (*proto_models.Symbol, error)
 	GetPaged(ctx context.Context, req *symbol_service.ReadPagedRequest) (*[]*proto_models.Symbol, uint, error)
-	Details(ctx context.Context, req *symbol_service.SymbolDetailsRequest) (*symbol_service.SymbolDetailsResponse, error)
+	Overview(ctx context.Context, req *symbol_service.SymbolOverviewRequest) (*symbol_service.SymbolOverview, error)
 
 	// service methods
 	Recalculate(ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error)
@@ -44,6 +45,15 @@ type SymbolService struct {
 	symbolOverviewRepository *db.SymbolOverviewRepository
 	alphaVantageService      *alpha_vantage.AlphaVantageService
 	externalSymbolService    *trading_212.ExternalSymbolService
+}
+
+func (s *SymbolService) Get(ctx context.Context, uuid string) (*proto_models.Symbol, error) {
+	sym, err := s.symbolRepository.GetByUuid(ctx, uuid)
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "invalid symbol uuid")
+	}
+
+	return sym.ToProto(), nil
 }
 
 func NewSymbolService(
@@ -80,7 +90,7 @@ func (s *SymbolService) GetPaged(ctx context.Context, req *symbol_service.ReadPa
 	return &res, totalItemsCount, nil
 }
 
-func (s *SymbolService) Details(ctx context.Context, req *symbol_service.SymbolDetailsRequest) (*symbol_service.SymbolDetailsResponse, error) {
+func (s *SymbolService) Overview(ctx context.Context, req *symbol_service.SymbolOverviewRequest) (*symbol_service.SymbolOverview, error) {
 	userInfo := ctx.Value("user_info")
 	if userInfo == nil {
 		return nil, status.Error(codes.Unauthenticated, "provide user token")
@@ -88,7 +98,7 @@ func (s *SymbolService) Details(ctx context.Context, req *symbol_service.SymbolD
 
 	symbol, err := s.symbolRepository.GetByUuid(ctx, req.Uuid)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.NotFound, "invalid symbol uuid")
 	}
 
 	overview, err := s.symbolOverviewRepository.GetBySymbolUuid(ctx, req.Uuid)
@@ -110,10 +120,7 @@ func (s *SymbolService) Details(ctx context.Context, req *symbol_service.SymbolD
 		overview = newOverview
 	}
 
-	return &symbol_service.SymbolDetailsResponse{
-		Symbol:  symbol.ToProto(),
-		Details: overview.ToProto(),
-	}, nil
+	return overview.ToProto(), nil
 }
 
 func (s *SymbolService) Recalculate(ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error) {
@@ -246,16 +253,12 @@ func (s *SymbolService) generateRecalculationResult(newSymbols []*proto_models.S
 			mapValue, exists := unique.Load(s.Uuid)
 			if !exists {
 				if ok, oldSym := common.ContainsSymbol(s.Uuid, oldSymbols); !ok {
-					if !ok {
-						wg.Add(1)
-						defer wg.Done()
-						unique.Store(s.Uuid,
-							&worker_symbol_service.RecalculateSymbolsResponse{
-								Type:   worker_symbol_service.RecalculateSymbolsResponse_CREATE,
-								Symbol: s,
-							})
-						return
-					}
+					unique.Store(s.Uuid,
+						&worker_symbol_service.RecalculateSymbolsResponse{
+							Type:   worker_symbol_service.RecalculateSymbolsResponse_CREATE,
+							Symbol: s,
+						})
+					return
 				} else {
 					// check if any fields from the new symbol are different from the old
 					shouldUpdate := false

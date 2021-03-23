@@ -66,13 +66,13 @@ message GetChartBySymbolUuidRequest {
   google.protobuf.Timestamp endDate = 3;
 }
 
-message GetChartBySymbolUuidResponse {
-  repeated ChartValue value = 1;
+message ChartDay {
+  repeated double values = 1;
 }
 
-message ChartValue {
-  string date = 1;
-  repeated double values = 2;
+message GetChartBySymbolUuidResponse {
+  repeated string dates = 1;
+  repeated ChartDay chartDays = 2;
 }
 
 service HistoryService {
