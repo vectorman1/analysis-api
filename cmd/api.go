@@ -85,7 +85,7 @@ func RunServer() error {
 		fmt.Println(sig)
 	}()
 
-	s, err := initializeServices(ctx, dbConnPool, client.Database(common.MONGO_DB_DATABASE), config)
+	s, err := initializeServices(ctx, dbConnPool, client.Database(common.MongoDbDatabase), config)
 	if err != nil {
 		return err
 	}

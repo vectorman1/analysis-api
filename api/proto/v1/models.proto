@@ -25,3 +25,11 @@ message Symbol {
 message Symbols {
   repeated Symbol symbols = 1;
 }
+
+message PagedFilter {
+  uint64 pageSize = 1;
+  uint64 pageNumber = 2;
+  string order = 3;
+  bool ascending = 4;
+  string text = 5;
+}

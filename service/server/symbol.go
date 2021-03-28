@@ -32,7 +32,7 @@ func (s *SymbolsServiceServer) Get(ctx context.Context, req *symbol_service.Symb
 	return s.symbolService.Get(ctx, req.Uuid)
 }
 
-func (s *SymbolsServiceServer) ReadPaged(ctx context.Context, req *symbol_service.ReadPagedRequest) (*symbol_service.ReadPagedResponse, error) {
+func (s *SymbolsServiceServer) GetPaged(ctx context.Context, req *symbol_service.GetPagedRequest) (*symbol_service.GetPagedResponse, error) {
 	timeoutContext, c := context.WithTimeout(ctx, 5*time.Second)
 	defer c()
 
@@ -41,7 +41,7 @@ func (s *SymbolsServiceServer) ReadPaged(ctx context.Context, req *symbol_servic
 		return nil, common.GetErrorStatus(err)
 	}
 
-	resp := &symbol_service.ReadPagedResponse{
+	resp := &symbol_service.GetPagedResponse{
 		Items:      *res,
 		TotalItems: uint64(totalItemsCount),
 	}

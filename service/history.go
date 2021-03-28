@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/vectorman1/analysis/analysis-api/generated/proto_models"
+
 	"google.golang.org/grpc/grpclog"
 
 	"github.com/vectorman1/analysis/analysis-api/generated/symbol_service"
@@ -164,8 +166,8 @@ func (s *HistoryService) GetChartBySymbolUuid(ctx context.Context, req *history_
 func (s *HistoryService) UpdateAll(ctx context.Context) error {
 	res, _, err := s.symbolRepository.GetPaged(
 		context.Background(),
-		&symbol_service.ReadPagedRequest{
-			Filter: &symbol_service.SymbolFilter{
+		&symbol_service.GetPagedRequest{
+			Filter: &proto_models.PagedFilter{
 				PageSize:   100000,
 				PageNumber: 1,
 				Order:      "identifier",

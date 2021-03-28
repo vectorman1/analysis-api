@@ -2,16 +2,34 @@ package common
 
 import "net/http"
 
-const TRADING212_INSTRUMENTS_LINK = `https://www.trading212.com/en/Trade-Equities`
-const TRADING212_SHOW_ALL_BUTTON_SELECTOR = `div.conditions-table > div > div.view-more > a`
-const TRADING212_ALL_INSTRUMENTS_SELECTOR = `#all-equities`
-const SYMBOLS_NAMCESPACE = `53edcce7-94d4-4deb-b2ac-d1f6d8657d8e`
-const MONGO_DB_DATABASE = `analysis`
-const OVERVIEWS_COLLECTION = `overviews`
-const HISTORIES_COLLECTION = `histories`
-const REPORTS_COLLECTION = `reports`
-const MaxConcurrency = 2000
+// urls and selectors for external fetch of symbols
+const Trading212InstrumentsLink = `https://www.trading212.com/en/Trade-Equities`
+const Trading212ShowAllButtonSelector = `div.conditions-table > div > div.view-more > a`
+const Trading212AllInstrumentsSelector = `#all-equities`
 
+// namespace of symbol uuids in order to reproduce them later
+const SymbolsNamespace = `53edcce7-94d4-4deb-b2ac-d1f6d8657d8e`
+
+// mongodb related constants
+const MongoDbDatabase = `analysis`
+const OverviewsCollection = `overviews`
+const HistoriesCollection = `histories`
+
+// market names, in order to extract only the relevant ones
+const MarketNYSE = `NYSE`
+const MarketNASDAQ = `NASDAQ`
+const MarketNonISANYSE = `NON-ISA NYSE`
+const MarketNonISAOTCMarkets = `NON-ISA OTC Markets`
+
+// constants for random string generation
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+const (
+	letterIdxBits = 6                    // 6 bits to represent a letter index
+	letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
+	letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
+)
+
+// "constant" slice of allowed headers and methdfor CORS config
 func GetAllowedHeaders() []string {
 	return []string{"Authorization", "Accept", "Origin", "DNT", "X-CustomHeader", "Keep-Alive", "User-Agent", "X-Requested-With", "If-Modified-Since", "Cache-Control", "Content-Type", "Content-Range", "Range"}
 }

@@ -15,14 +15,13 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type historyRepository interface {
+type HistoryRepositoryContract interface {
 	InsertMany(ctx context.Context, list *[]documents.History) (int, error)
 	GetSymbolHistory(ctx context.Context, symbolUuid string, startDate time.Time, endDate time.Time, desc bool) (*[]documents.History, error)
 	GetLastSymbolHistory(ctx context.Context, symbolUuid string) (*documents.LastHistory, error)
 }
 
 type HistoryRepository struct {
-	historyRepository
 	mongodb *mongo.Database
 }
 
@@ -38,7 +37,7 @@ func (r *HistoryRepository) InsertMany(ctx context.Context, list *[]documents.Hi
 		e = append(e, v)
 	}
 
-	res, err := r.mongodb.Collection(common.HISTORIES_COLLECTION).
+	res, err := r.mongodb.Collection(common.HistoriesCollection).
 		InsertMany(ctx, e)
 	if err != nil {
 		return 0, err
@@ -70,7 +69,7 @@ func (r *HistoryRepository) GetSymbolHistory(ctx context.Context, symbolUuid str
 		},
 	}
 
-	filterCursor, err := r.mongodb.Collection(common.HISTORIES_COLLECTION).
+	filterCursor, err := r.mongodb.Collection(common.HistoriesCollection).
 		Find(ctx, filter, opts)
 	if err != nil {
 		return nil, err
@@ -113,7 +112,7 @@ func (r *HistoryRepository) GetLastSymbolHistory(ctx context.Context, symbolUuid
 	}
 
 	var res documents.LastHistory
-	curr, err := r.mongodb.Collection(common.HISTORIES_COLLECTION).
+	curr, err := r.mongodb.Collection(common.HistoriesCollection).
 		Aggregate(ctx, pipeline)
 	if err != nil {
 		return nil, err

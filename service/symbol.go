@@ -26,18 +26,19 @@ import (
 	"github.com/vectorman1/analysis/analysis-api/generated/symbol_service"
 )
 
-type symbolService interface {
+type SymbolServiceContract interface {
 	// repo methods
 	Get(ctx context.Context, uuid string) (*proto_models.Symbol, error)
-	GetPaged(ctx context.Context, req *symbol_service.ReadPagedRequest) (*[]*proto_models.Symbol, uint, error)
+	GetPaged(ctx context.Context, req *symbol_service.GetPagedRequest) (*[]*proto_models.Symbol, uint, error)
 	Overview(ctx context.Context, req *symbol_service.SymbolOverviewRequest) (*symbol_service.SymbolOverview, error)
 
 	// service methods
-	Recalculate(ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error)
+	UpdateAll(ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error)
 	processRecalculationResponse(
 		input []*worker_symbol_service.RecalculateSymbolsResponse,
 		ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error)
 	symbolDataToEntity(in *[]*proto_models.Symbol) ([]*entities.Symbol, error)
+	filterUnusableSymbols(symbols *[]*proto_models.Symbol) *[]*proto_models.Symbol
 }
 
 type SymbolService struct {

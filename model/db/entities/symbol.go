@@ -2,7 +2,7 @@ package entities
 
 import (
 	"github.com/golang/protobuf/ptypes"
-	"github.com/jackc/pgx/pgtype"
+	"github.com/jackc/pgtype"
 	"github.com/vectorman1/analysis/analysis-api/generated/proto_models"
 )
 

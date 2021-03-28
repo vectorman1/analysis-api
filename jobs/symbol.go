@@ -22,7 +22,7 @@ func (j SymbolRecalculationJob) Run() {
 	ctx, c := context.WithTimeout(context.Background(), 30*time.Second)
 	defer c()
 
-	res, err := j.symbolService.Recalculate(ctx)
+	res, err := j.symbolService.UpdateAll(ctx)
 	if err != nil {
 		grpclog.Errorf("[SYMBOL JOB] Failed recalculation job: %v", err)
 	}
