@@ -1,19 +1,25 @@
 package db
 
 import (
+	"context"
+	"time"
+
 	"github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx"
+	"github.com/vectorman1/analysis/analysis-api/common"
+	"github.com/vectorman1/analysis/analysis-api/generated/proto_models"
 	"github.com/vectorman1/analysis/analysis-api/model/db/entities"
-	"golang.org/x/crypto/bcrypt"
 )
 
-type userRepository interface {
-	Create(user *entities.User) (*entities.User, error)
-	Get(username string, password string) (*entities.User, error)
+type UserRepositoryContract interface {
+	GetByUsername(context.Context, string) (*entities.User, error)
+	GetPaged(context.Context, *proto_models.PagedFilter) (*[]entities.User, uint, error)
+	Create(context.Context, *entities.User) error
+	Update(context.Context, *entities.User) error
+	Delete(context.Context, string) error
 }
 
 type UserRepository struct {
-	userRepository
 	db *pgx.ConnPool
 }
 
@@ -23,26 +29,7 @@ func NewUserRepository(db *pgx.ConnPool) *UserRepository {
 	}
 }
 
-func (r *UserRepository) Create(user *entities.User) error {
-	query, args, err := squirrel.
-		Insert("\"user\".users").
-		Columns("uuid, private_role, username, password, created_at, updated_at").
-		Values(&user.Uuid, &user.PrivateRole, &user.Username, &user.Password, &user.CreatedAt, &user.UpdatedAt).
-		PlaceholderFormat(squirrel.Dollar).
-		ToSql()
-	if err != nil {
-		return err
-	}
-
-	_, err = r.db.Exec(query, args...)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (r *UserRepository) Get(username string, password string) (*entities.User, error) {
+func (r *UserRepository) GetByUsername(ctx context.Context, username string) (*entities.User, error) {
 	// Find user with matching username
 	query, args, err := squirrel.
 		Select("*").
@@ -59,11 +46,108 @@ func (r *UserRepository) Get(username string, password string) (*entities.User, 
 		return nil, err
 	}
 
-	// Validate password
-	err = bcrypt.CompareHashAndPassword([]byte(res.Password), []byte(password))
+	return &res, nil
+}
+
+func (r *UserRepository) GetPaged(ctx context.Context, filter *proto_models.PagedFilter) (*[]entities.User, uint, error) {
+	// generate query
+	order := common.FormatOrderQuery(filter.Order, filter.Ascending)
+	query, args, err := squirrel.
+		Select("*, count(*) OVER() AS total_count").
+		From("\"user\".users").
+		OrderBy(order).
+		Offset((filter.PageNumber - 1) * filter.PageSize).
+		Limit(filter.PageSize).
+		Where("deleted_at is NULL").
+		PlaceholderFormat(squirrel.Dollar).
+		ToSql()
+
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return &res, nil
+	rows, err := r.db.QueryEx(ctx, query, &pgx.QueryExOptions{}, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var result []entities.User
+	var totalItems uint
+	for rows.Next() {
+		user := entities.User{}
+		if err = rows.Scan(
+			&user.ID,
+			&user.Uuid,
+			&user.PrivateRole,
+			&user.Username,
+			&user.Password,
+			&user.CreatedAt,
+			&user.UpdatedAt,
+			&user.DeletedAt,
+			&totalItems); err != nil {
+			return nil, 0, err
+		}
+		result = append(result, user)
+	}
+
+	return &result, totalItems, nil
+}
+
+func (r *UserRepository) Create(ctx context.Context, user *entities.User) error {
+	query, args, err := squirrel.
+		Insert("\"user\".users").
+		Columns("uuid, private_role, username, password, created_at, updated_at").
+		Values(&user.Uuid, &user.PrivateRole, &user.Username, &user.Password, time.Now(), time.Now()).
+		PlaceholderFormat(squirrel.Dollar).
+		ToSql()
+	if err != nil {
+		return err
+	}
+
+	_, err = r.db.ExecEx(ctx, query, &pgx.QueryExOptions{}, args...)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *UserRepository) Update(ctx context.Context, user *entities.User) error {
+	query, args, err := squirrel.
+		Update("\"user\".users").
+		Where(squirrel.Eq{"uuid": user.Uuid}).
+		Set("username", user.Username).
+		Set("password", user.Password).
+		Set("updated_at", time.Now()).
+		Set("private_role", user.PrivateRole).
+		PlaceholderFormat(squirrel.Dollar).
+		ToSql()
+	if err != nil {
+		return err
+	}
+
+	_, err = r.db.ExecEx(ctx, query, &pgx.QueryExOptions{}, args...)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *UserRepository) Delete(ctx context.Context, uuid string) error {
+	query, args, err := squirrel.
+		Update("\"user\".users").
+		Where(squirrel.Eq{"uuid": uuid}).
+		Set("deleted_at", time.Now()).
+		ToSql()
+	if err != nil {
+		return err
+	}
+
+	_, err = r.db.ExecEx(ctx, query, &pgx.QueryExOptions{}, args...)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
