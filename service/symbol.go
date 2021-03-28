@@ -70,7 +70,7 @@ func NewSymbolService(
 	}
 }
 
-func (s *SymbolService) GetPaged(ctx context.Context, req *symbol_service.ReadPagedRequest) (*[]*proto_models.Symbol, uint, error) {
+func (s *SymbolService) GetPaged(ctx context.Context, req *symbol_service.GetPagedRequest) (*[]*proto_models.Symbol, uint, error) {
 	if req.Filter == nil {
 		return nil, 0, status.Errorf(codes.InvalidArgument, "provide filter")
 	}
@@ -124,9 +124,9 @@ func (s *SymbolService) Overview(ctx context.Context, req *symbol_service.Symbol
 	return overview.ToProto(), nil
 }
 
-func (s *SymbolService) Recalculate(ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error) {
-	oldSymbols, _, err := s.GetPaged(ctx, &symbol_service.ReadPagedRequest{
-		Filter: &symbol_service.SymbolFilter{
+func (s *SymbolService) UpdateAll(ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error) {
+	oldSymbols, _, err := s.GetPaged(ctx, &symbol_service.GetPagedRequest{
+		Filter: &proto_models.PagedFilter{
 			PageSize:   100000,
 			PageNumber: 1,
 			Order:      "identifier",
