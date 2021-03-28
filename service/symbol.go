@@ -2,8 +2,11 @@ package service
 
 import (
 	"context"
-	"sync"
 	"time"
+
+	"google.golang.org/grpc/grpclog"
+
+	"github.com/vectorman1/analysis/analysis-api/common"
 
 	"github.com/vectorman1/analysis/analysis-api/generated/worker_symbol_service"
 
@@ -14,10 +17,6 @@ import (
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
-	"google.golang.org/grpc/grpclog"
-
-	"github.com/vectorman1/analysis/analysis-api/common"
 
 	"github.com/jackc/pgx"
 
@@ -142,6 +141,7 @@ func (s *SymbolService) UpdateAll(ctx context.Context) (*symbol_service.Recalcul
 		return nil, err
 	}
 
+	externalSymbols = s.filterUnusableSymbols(externalSymbols)
 	result := s.generateRecalculationResult(*externalSymbols, *oldSymbols)
 	response, err := s.processRecalculationResponse(result, ctx)
 	if err != nil {
@@ -243,87 +243,90 @@ func (s *SymbolService) symbolDataToEntity(in *[]*proto_models.Symbol) ([]*entit
 }
 
 func (s *SymbolService) generateRecalculationResult(newSymbols []*proto_models.Symbol, oldSymbols []*proto_models.Symbol) []*worker_symbol_service.RecalculateSymbolsResponse {
-	var wg sync.WaitGroup
-	unique := sync.Map{}
-	// generate create, update and ignore responses
-	for _, newSym := range newSymbols {
-		go func(wg *sync.WaitGroup, s *proto_models.Symbol) {
-			wg.Add(1)
-			defer wg.Done()
-
-			mapValue, exists := unique.Load(s.Uuid)
-			if !exists {
-				if ok, oldSym := common.ContainsSymbol(s.Uuid, oldSymbols); !ok {
-					unique.Store(s.Uuid,
-						&worker_symbol_service.RecalculateSymbolsResponse{
-							Type:   worker_symbol_service.RecalculateSymbolsResponse_CREATE,
-							Symbol: s,
-						})
-					return
-				} else {
-					// check if any fields from the new symbol are different from the old
-					shouldUpdate := false
-					if oldSym.Name != s.Name {
-						shouldUpdate = true
-					} else if oldSym.MarketHoursGmt != s.MarketHoursGmt {
-						shouldUpdate = true
-					}
-
-					// Identifier, ISIN and Market Name are not checked, as they are used in the uuids of the symbols
-					// if any fields are updated, send and update response, otherwise, send it back and ignore it
-					if shouldUpdate {
-						unique.Store(s.Uuid,
-							&worker_symbol_service.RecalculateSymbolsResponse{
-								Type:   worker_symbol_service.RecalculateSymbolsResponse_UPDATE,
-								Symbol: s,
-							})
-						return
-					} else {
-						unique.Store(s.Uuid,
-							&worker_symbol_service.RecalculateSymbolsResponse{
-								Type:   worker_symbol_service.RecalculateSymbolsResponse_IGNORE,
-								Symbol: s,
-							})
-						return
-					}
-				}
-			} else {
-				grpclog.Infoln("collision while checking for CREATE , UPDATE OR IGNORE - existing:", mapValue)
-				grpclog.Infoln("new: ", s)
-			}
-		}(&wg, newSym)
-	}
-
-	// generate delete responses
-	for _, oldSym := range oldSymbols {
-		go func(wg *sync.WaitGroup, s *proto_models.Symbol) {
-			wg.Add(1)
-			defer wg.Done()
-
-			mapValue, exists := unique.Load(s.Uuid)
-			if !exists {
-				if ok, _ := common.ContainsSymbol(s.Uuid, newSymbols); !ok {
-					unique.Store(s.Uuid,
-						&worker_symbol_service.RecalculateSymbolsResponse{
-							Type:   worker_symbol_service.RecalculateSymbolsResponse_DELETE,
-							Symbol: s,
-						})
-					return
-				}
-			} else {
-				grpclog.Infoln("collision while checking for DELETE - existing:", mapValue)
-				grpclog.Infoln("new: ", s)
-			}
-		}(&wg, oldSym)
-	}
-
-	wg.Wait()
-
 	var result []*worker_symbol_service.RecalculateSymbolsResponse
-	unique.Range(func(k, v interface{}) bool {
-		result = append(result, v.(*worker_symbol_service.RecalculateSymbolsResponse))
-		return true
-	})
+	unique := make(map[string]*worker_symbol_service.RecalculateSymbolsResponse)
+	output := make(chan *worker_symbol_service.RecalculateSymbolsResponse)
+
+	go func() {
+		for _, newSym := range newSymbols {
+			if ok, oldSym := common.ContainsSymbol(newSym.Uuid, oldSymbols); !ok {
+				output <- &worker_symbol_service.RecalculateSymbolsResponse{
+					Type:   worker_symbol_service.RecalculateSymbolsResponse_CREATE,
+					Symbol: newSym,
+				}
+				continue
+			} else {
+				shouldUpdate := false
+				if oldSym.Name != newSym.Name {
+					shouldUpdate = true
+				} else if oldSym.MarketHoursGmt != newSym.MarketHoursGmt {
+					shouldUpdate = true
+				}
+				// Identifier, ISIN and Market Name are not checked, as they are used in the uuids of the symbols
+				// if any fields are updated, send an update response
+				if shouldUpdate {
+					output <- &worker_symbol_service.RecalculateSymbolsResponse{
+						Type:   worker_symbol_service.RecalculateSymbolsResponse_UPDATE,
+						Symbol: newSym,
+					}
+					continue
+				} else {
+					output <- &worker_symbol_service.RecalculateSymbolsResponse{
+						Type:   worker_symbol_service.RecalculateSymbolsResponse_IGNORE,
+						Symbol: newSym,
+					}
+				}
+			}
+		}
+
+		for _, sym := range oldSymbols {
+			if ok, _ := common.ContainsSymbol(sym.Uuid, newSymbols); !ok {
+				output <- &worker_symbol_service.RecalculateSymbolsResponse{
+					Type:   worker_symbol_service.RecalculateSymbolsResponse_DELETE,
+					Symbol: sym,
+				}
+			}
+		}
+
+		close(output)
+	}()
+
+	for res := range output {
+		if existing := unique[res.Symbol.Uuid]; existing == nil {
+			unique[res.Symbol.Uuid] = res
+		} else {
+			grpclog.Infof(
+				"symbol update collision - new type: %d - existing type: %d (new, existing): %s, %s - %s, %s",
+				res.Type, existing.Type,
+				res.Symbol.Name, existing.Symbol.Name,
+				res.Symbol.MarketHoursGmt, existing.Symbol.MarketHoursGmt)
+		}
+	}
+
+	for _, res := range unique {
+		result = append(result, res)
+	}
 
 	return result
+}
+
+func (s *SymbolService) filterUnusableSymbols(symbols *[]*proto_models.Symbol) *[]*proto_models.Symbol {
+	var res []*proto_models.Symbol
+
+	for _, sym := range *symbols {
+		switch sym.MarketName {
+		case common.MarketNASDAQ:
+			res = append(res, sym)
+		case common.MarketNYSE:
+			res = append(res, sym)
+		case common.MarketNonISANYSE:
+			res = append(res, sym)
+		case common.MarketNonISAOTCMarkets:
+			res = append(res, sym)
+		default:
+			continue
+		}
+	}
+
+	return &res
 }
