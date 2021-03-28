@@ -31,8 +31,8 @@ var _ = runtime.String
 var _ = utilities.NewDoubleArray
 var _ = metadata.Join
 
-func request_SymbolService_ReadPaged_0(ctx context.Context, marshaler runtime.Marshaler, client SymbolServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ReadPagedRequest
+func request_SymbolService_GetPaged_0(ctx context.Context, marshaler runtime.Marshaler, client SymbolServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq GetPagedRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -43,13 +43,13 @@ func request_SymbolService_ReadPaged_0(ctx context.Context, marshaler runtime.Ma
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
-	msg, err := client.ReadPaged(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	msg, err := client.GetPaged(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 
 }
 
-func local_request_SymbolService_ReadPaged_0(ctx context.Context, marshaler runtime.Marshaler, server SymbolServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ReadPagedRequest
+func local_request_SymbolService_GetPaged_0(ctx context.Context, marshaler runtime.Marshaler, server SymbolServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq GetPagedRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -60,7 +60,7 @@ func local_request_SymbolService_ReadPaged_0(ctx context.Context, marshaler runt
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
-	msg, err := server.ReadPaged(ctx, &protoReq)
+	msg, err := server.GetPaged(ctx, &protoReq)
 	return msg, metadata, err
 
 }
@@ -193,18 +193,18 @@ func local_request_SymbolService_StartUpdateJob_0(ctx context.Context, marshaler
 // Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterSymbolServiceHandlerFromEndpoint instead.
 func RegisterSymbolServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux, server SymbolServiceServer) error {
 
-	mux.Handle("POST", pattern_SymbolService_ReadPaged_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_SymbolService_GetPaged_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/v1.symbol_service.SymbolService/ReadPaged")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/v1.symbol_service.SymbolService/GetPaged")
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_SymbolService_ReadPaged_0(rctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_SymbolService_GetPaged_0(rctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -212,7 +212,7 @@ func RegisterSymbolServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 			return
 		}
 
-		forward_SymbolService_ReadPaged_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_SymbolService_GetPaged_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -326,23 +326,23 @@ func RegisterSymbolServiceHandler(ctx context.Context, mux *runtime.ServeMux, co
 // "SymbolServiceClient" to call the correct interceptors.
 func RegisterSymbolServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux, client SymbolServiceClient) error {
 
-	mux.Handle("POST", pattern_SymbolService_ReadPaged_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_SymbolService_GetPaged_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/v1.symbol_service.SymbolService/ReadPaged")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/v1.symbol_service.SymbolService/GetPaged")
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_SymbolService_ReadPaged_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_SymbolService_GetPaged_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_SymbolService_ReadPaged_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_SymbolService_GetPaged_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -410,7 +410,7 @@ func RegisterSymbolServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 }
 
 var (
-	pattern_SymbolService_ReadPaged_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "symbols", "paged"}, ""))
+	pattern_SymbolService_GetPaged_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "symbols", "paged"}, ""))
 
 	pattern_SymbolService_Overview_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"api", "v1", "symbols", "uuid", "overview"}, ""))
 
@@ -420,7 +420,7 @@ var (
 )
 
 var (
-	forward_SymbolService_ReadPaged_0 = runtime.ForwardResponseMessage
+	forward_SymbolService_GetPaged_0 = runtime.ForwardResponseMessage
 
 	forward_SymbolService_Overview_0 = runtime.ForwardResponseMessage
 

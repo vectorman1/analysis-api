@@ -18,7 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type SymbolServiceClient interface {
-	ReadPaged(ctx context.Context, in *ReadPagedRequest, opts ...grpc.CallOption) (*ReadPagedResponse, error)
+	GetPaged(ctx context.Context, in *GetPagedRequest, opts ...grpc.CallOption) (*GetPagedResponse, error)
 	Overview(ctx context.Context, in *SymbolOverviewRequest, opts ...grpc.CallOption) (*SymbolOverview, error)
 	Get(ctx context.Context, in *SymbolRequest, opts ...grpc.CallOption) (*proto_models.Symbol, error)
 	StartUpdateJob(ctx context.Context, in *StartUpdateJobRequest, opts ...grpc.CallOption) (*StartUpdateJobResponse, error)
@@ -32,9 +32,9 @@ func NewSymbolServiceClient(cc grpc.ClientConnInterface) SymbolServiceClient {
 	return &symbolServiceClient{cc}
 }
 
-func (c *symbolServiceClient) ReadPaged(ctx context.Context, in *ReadPagedRequest, opts ...grpc.CallOption) (*ReadPagedResponse, error) {
-	out := new(ReadPagedResponse)
-	err := c.cc.Invoke(ctx, "/v1.symbol_service.SymbolService/ReadPaged", in, out, opts...)
+func (c *symbolServiceClient) GetPaged(ctx context.Context, in *GetPagedRequest, opts ...grpc.CallOption) (*GetPagedResponse, error) {
+	out := new(GetPagedResponse)
+	err := c.cc.Invoke(ctx, "/v1.symbol_service.SymbolService/GetPaged", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +72,7 @@ func (c *symbolServiceClient) StartUpdateJob(ctx context.Context, in *StartUpdat
 // All implementations must embed UnimplementedSymbolServiceServer
 // for forward compatibility
 type SymbolServiceServer interface {
-	ReadPaged(context.Context, *ReadPagedRequest) (*ReadPagedResponse, error)
+	GetPaged(context.Context, *GetPagedRequest) (*GetPagedResponse, error)
 	Overview(context.Context, *SymbolOverviewRequest) (*SymbolOverview, error)
 	Get(context.Context, *SymbolRequest) (*proto_models.Symbol, error)
 	StartUpdateJob(context.Context, *StartUpdateJobRequest) (*StartUpdateJobResponse, error)
@@ -83,8 +83,8 @@ type SymbolServiceServer interface {
 type UnimplementedSymbolServiceServer struct {
 }
 
-func (UnimplementedSymbolServiceServer) ReadPaged(context.Context, *ReadPagedRequest) (*ReadPagedResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ReadPaged not implemented")
+func (UnimplementedSymbolServiceServer) GetPaged(context.Context, *GetPagedRequest) (*GetPagedResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPaged not implemented")
 }
 func (UnimplementedSymbolServiceServer) Overview(context.Context, *SymbolOverviewRequest) (*SymbolOverview, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Overview not implemented")
@@ -108,20 +108,20 @@ func RegisterSymbolServiceServer(s *grpc.Server, srv SymbolServiceServer) {
 	s.RegisterService(&_SymbolService_serviceDesc, srv)
 }
 
-func _SymbolService_ReadPaged_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ReadPagedRequest)
+func _SymbolService_GetPaged_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPagedRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SymbolServiceServer).ReadPaged(ctx, in)
+		return srv.(SymbolServiceServer).GetPaged(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/v1.symbol_service.SymbolService/ReadPaged",
+		FullMethod: "/v1.symbol_service.SymbolService/GetPaged",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SymbolServiceServer).ReadPaged(ctx, req.(*ReadPagedRequest))
+		return srv.(SymbolServiceServer).GetPaged(ctx, req.(*GetPagedRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -185,8 +185,8 @@ var _SymbolService_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*SymbolServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "ReadPaged",
-			Handler:    _SymbolService_ReadPaged_Handler,
+			MethodName: "GetPaged",
+			Handler:    _SymbolService_GetPaged_Handler,
 		},
 		{
 			MethodName: "Overview",
