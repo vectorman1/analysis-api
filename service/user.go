@@ -1,7 +1,12 @@
 package service
 
 import (
+	"context"
 	"time"
+
+	"github.com/jackc/pgtype"
+
+	validation "github.com/vectorman1/analysis/analysis-api/common/errors"
 
 	"github.com/vectorman1/analysis/analysis-api/model/db/entities"
 	"github.com/vectorman1/analysis/analysis-api/model/service"
@@ -12,7 +17,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/gofrs/uuid"
-	"github.com/jackc/pgx/pgtype"
 
 	"github.com/vectorman1/analysis/analysis-api/common"
 
@@ -21,13 +25,16 @@ import (
 	"github.com/vectorman1/analysis/analysis-api/generated/user_service"
 )
 
-type userService interface {
-	Login(*user_service.LoginRequest) (*user_service.LoginResponse, error)
-	Register(*user_service.RegisterRequest) (*user_service.RegisterResponse, error)
+type UserServiceContract interface {
+	Login(context.Context, *user_service.LoginRequest) (*user_service.LoginResponse, error)
+	Register(context.Context, *user_service.RegisterRequest) (*user_service.RegisterResponse, error)
+	GetPaged(context.Context, *user_service.GetPagedRequest) (*user_service.GetPagedResponse, error)
+	Create(context.Context, *user_service.CreateRequest) (*user_service.CreateResponse, error)
+	Update(context.Context, *user_service.UpdateRequest) (*user_service.UpdateResponse, error)
+	Delete(context.Context, *user_service.DeleteRequest) (*user_service.DeleteResponse, error)
 }
 
 type UserService struct {
-	userService
 	userRepository *db.UserRepository
 	config         *common.Config
 }
@@ -39,17 +46,22 @@ func NewUserService(userRepository *db.UserRepository, config *common.Config) *U
 	}
 }
 
-// Login attempts to find a user with a matching username and hashed password
+// Login attempts to find a user with a matching username, verifies the password
 // and returns a response with a Token or an error
-func (s *UserService) Login(request *user_service.LoginRequest) (*user_service.LoginResponse, error) {
+func (s *UserService) Login(ctx context.Context, request *user_service.LoginRequest) (*user_service.LoginResponse, error) {
 	if request.Username == "" || request.Password == "" {
-		return nil, status.Error(codes.InvalidArgument, "Wrong username or password.")
+		return nil, status.Error(codes.InvalidArgument, validation.WrongUsernameOrPassword)
 	}
 
-	user, err := s.userRepository.Get(request.Username, request.Password)
+	user, err := s.userRepository.GetByUsername(ctx, request.Username)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Wrong username or password.")
+		return nil, status.Errorf(codes.InvalidArgument, validation.WrongUsernameOrPassword)
 	}
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(request.Password))
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, validation.WrongUsernameOrPassword)
+	}
+
 	var u string
 	user.Uuid.AssignTo(&u)
 
@@ -76,9 +88,9 @@ func (s *UserService) Login(request *user_service.LoginRequest) (*user_service.L
 
 // Register attempts to create a User with the corresponding
 // username and hashing the password.
-func (s *UserService) Register(request *user_service.RegisterRequest) (*user_service.RegisterResponse, error) {
+func (s *UserService) Register(ctx context.Context, request *user_service.RegisterRequest) (*user_service.RegisterResponse, error) {
 	if request.Username == "" || request.Password == "" {
-		return nil, status.Error(codes.InvalidArgument, "Invalid username or password.")
+		return nil, status.Error(codes.InvalidArgument, validation.InvalidUsernameOrPassword)
 	}
 	if len(request.Password) < 8 {
 		return nil, status.Error(codes.InvalidArgument, "Minimum password length is 8.")
@@ -101,15 +113,14 @@ func (s *UserService) Register(request *user_service.RegisterRequest) (*user_ser
 		return nil, err
 	}
 	user.Password = string(hashedPassword)
-	user.CreatedAt = pgtype.Timestamptz{Time: time.Now(), Status: pgtype.Present}
-	user.UpdatedAt = pgtype.Timestamptz{Time: time.Now(), Status: pgtype.Present}
 
-	err = s.userRepository.Create(user)
+	err = s.userRepository.Create(ctx, user)
 	if err != nil {
 		return nil, err
 	}
 
 	loginResponse, err := s.Login(
+		ctx,
 		&user_service.LoginRequest{
 			Username: request.Username, Password: request.Password,
 		})
@@ -118,4 +129,52 @@ func (s *UserService) Register(request *user_service.RegisterRequest) (*user_ser
 	}
 
 	return &user_service.RegisterResponse{Token: loginResponse.Token}, nil
+}
+
+func (s *UserService) GetPaged(ctx context.Context, request *user_service.GetPagedRequest) (*user_service.GetPagedResponse, error) {
+	users, total, err := s.userRepository.GetPaged(ctx, request.Filter)
+	if err != nil {
+		return nil, err
+	}
+
+	var protoUsers []*user_service.User
+	for _, u := range *users {
+		protoUsers = append(protoUsers, u.ToProto())
+	}
+
+	return &user_service.GetPagedResponse{
+		Items:      protoUsers,
+		TotalItems: uint64(total),
+	}, nil
+}
+
+func (s *UserService) Create(ctx context.Context, request *user_service.CreateRequest) (*user_service.CreateResponse, error) {
+	password := common.RandomStringWithLength(10)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 10)
+	if err != nil {
+		return nil, err
+	}
+
+	user := &entities.User{
+		PrivateRole: entities.PrivateRole(request.PrivateRole),
+		Username:    request.Username,
+		Password:    string(hashedPassword),
+	}
+	u, _ := uuid.NewV4()
+	user.Uuid.Set(u.Bytes())
+
+	err = s.userRepository.Create(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+
+	return &user_service.CreateResponse{Password: password}, nil
+}
+
+func (s *UserService) Update(ctx context.Context, request *user_service.UpdateRequest) (*user_service.UpdateResponse, error) {
+	panic("implement me")
+}
+
+func (s *UserService) Delete(ctx context.Context, request *user_service.DeleteRequest) (*user_service.DeleteResponse, error) {
+	panic("implement me")
 }
