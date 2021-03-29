@@ -16,7 +16,7 @@ require (
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgtype v1.7.0
 	github.com/jackc/pgx v3.6.2+incompatible
-	github.com/philips/go-bindata-assetfs v0.0.0-20150624150248-3dcc96556217 // indirect
+	github.com/philips/go-bindata-assetfs v0.0.0-20150624150248-3dcc96556217
 	github.com/piquette/finance-go v1.0.0
 	github.com/rs/zerolog v1.21.0
 	github.com/sdcoffey/big v0.7.0

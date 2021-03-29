@@ -2,10 +2,7 @@ package rest_server
 
 import (
 	"context"
-	"mime"
 	"strings"
-
-	"github.com/vectorman1/analysis/analysis-api/pkg/ui/data/swagger"
 
 	"github.com/vectorman1/analysis/analysis-api/generated/history_service"
 
@@ -27,8 +24,6 @@ import (
 	tracer_rest "github.com/vectorman1/analysis/analysis-api/middleware/tracer-rest"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
-
-	assetfs "github.com/philips/go-bindata-assetfs"
 )
 
 // RunServer runs HTTP/REST gateway
@@ -97,17 +92,4 @@ func allowCORS(h http.Handler, allowedOrigin string) http.Handler {
 		}
 		h.ServeHTTP(w, r)
 	})
-}
-
-func serveSwagger(mux *http.ServeMux) {
-	mime.AddExtensionType(".svg", "image/svg+xml")
-
-	// Expose files in third_party/swagger-ui/ on <host>/swagger-ui
-	fileServer := http.FileServer(&assetfs.AssetFS{
-		Asset:    swagger.Asset,
-		AssetDir: swagger.AssetDir,
-		Prefix:   "third_party/swagger-ui",
-	})
-	prefix := "/swagger-ui/"
-	mux.Handle(prefix, http.StripPrefix(prefix, fileServer))
 }
