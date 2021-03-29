@@ -2,7 +2,7 @@ package entities
 
 import (
 	"github.com/golang/protobuf/ptypes"
-	"github.com/jackc/pgx/pgtype"
+	"github.com/jackc/pgtype"
 	"github.com/vectorman1/analysis/analysis-api/generated/proto_models"
 )
 
@@ -50,7 +50,6 @@ func (s *Symbol) ToProto() *proto_models.Symbol {
 	s.Uuid.AssignTo(&u)
 
 	res := &proto_models.Symbol{
-		Id:                   uint64(s.ID),
 		CurrencyCode:         s.CurrencyCode,
 		Isin:                 s.Isin,
 		Uuid:                 u,

@@ -69,8 +69,31 @@ func (s *ReportService) GetTAValues(histories []documents.History, newLen int) [
 		if history.Calculated {
 			continue
 		}
+
 		wg.Add(1)
-		go func(i int) {
+		go func(i int, ma5, ma10, ma20, ma30, ma60, ma120 techan.Indicator) {
+			defer wg.Done()
+			histories[i].MA.MA5 = ma5.Calculate(i).Float()
+			histories[i].MA.MA10 = ma10.Calculate(i).Float()
+			histories[i].MA.MA20 = ma20.Calculate(i).Float()
+			histories[i].MA.MA30 = ma30.Calculate(i).Float()
+			histories[i].MA.MA60 = ma60.Calculate(i).Float()
+			histories[i].MA.MA120 = ma120.Calculate(i).Float()
+		}(i, ma5, ma10, ma20, ma30, ma60, ma120)
+
+		wg.Add(1)
+		go func(i int, ema5, ema10, ema20, ema30, ema60, ema120 techan.Indicator) {
+			defer wg.Done()
+			histories[i].EMA.EMA5 = ema5.Calculate(i).Float()
+			histories[i].EMA.EMA10 = ema10.Calculate(i).Float()
+			histories[i].EMA.EMA20 = ema20.Calculate(i).Float()
+			histories[i].EMA.EMA30 = ema30.Calculate(i).Float()
+			histories[i].EMA.EMA60 = ema60.Calculate(i).Float()
+			histories[i].EMA.EMA120 = ema120.Calculate(i).Float()
+		}(i, ema5, ema10, ema20, ema30, ema60, ema120)
+
+		wg.Add(1)
+		go func(i int, trend5, trend10, trend20, trend30, trend60, trend120 techan.Indicator) {
 			defer wg.Done()
 			if i >= 5 {
 				histories[i].Trend.Trend5 = trend5.Calculate(i).Float()
@@ -90,26 +113,17 @@ func (s *ReportService) GetTAValues(histories []documents.History, newLen int) [
 			if i >= 120 {
 				histories[i].Trend.Trend120 = trend120.Calculate(i).Float()
 			}
+		}(i, trend5, trend10, trend20, trend30, trend60, trend120)
 
-			histories[i].MA.MA5 = ma5.Calculate(i).Float()
-			histories[i].EMA.EMA5 = ema5.Calculate(i).Float()
-			histories[i].MA.MA10 = ma10.Calculate(i).Float()
-			histories[i].EMA.EMA10 = ema10.Calculate(i).Float()
-			histories[i].MA.MA20 = ma20.Calculate(i).Float()
-			histories[i].EMA.EMA20 = ema20.Calculate(i).Float()
-			histories[i].MA.MA30 = ma30.Calculate(i).Float()
-			histories[i].EMA.EMA30 = ema30.Calculate(i).Float()
-			histories[i].MA.MA60 = ma60.Calculate(i).Float()
-			histories[i].EMA.EMA60 = ema60.Calculate(i).Float()
-			histories[i].MA.MA120 = ma120.Calculate(i).Float()
-			histories[i].EMA.EMA120 = ema120.Calculate(i).Float()
-
+		wg.Add(1)
+		go func(i int, macd, macdHist, rsi techan.Indicator) {
+			defer wg.Done()
 			histories[i].MACD.Line = macd.Calculate(i).Float()
 			histories[i].MACD.Histogram = macdHist.Calculate(i).Float()
 			histories[i].RSI = rsi.Calculate(i).Float()
+		}(i, macd, macdHist, rsi)
 
-			histories[i].Calculated = true
-		}(i)
+		histories[i].Calculated = true
 	}
 
 	wg.Wait()

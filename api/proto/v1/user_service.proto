@@ -2,7 +2,9 @@ syntax="proto3";
 package v1.user_service;
 
 import "google/api/annotations.proto";
+import "models.proto";
 import "protoc-gen-swagger/options/annotations.proto";
+import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/vectorman1/analysis-api/generated/user_service";
 
@@ -32,22 +34,68 @@ option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
   }
 };
 
-message LoginRequest{
+message User {
+  uint64 id = 1;
+  string uuid = 2;
+  string username = 3;
+  string password = 4;
+  uint32 privateRole = 5;
+  google.protobuf.Timestamp createdAt = 11;
+  google.protobuf.Timestamp updatedAt = 12;
+}
+
+message LoginRequest {
   string username = 1;
   string password = 2;
 }
 
-message LoginResponse{
+message LoginResponse {
   string token = 2;
 }
 
-message RegisterRequest{
+message RegisterRequest {
   string username = 1;
   string password = 2;
 }
 
-message RegisterResponse{
+message RegisterResponse {
   string token = 2;
+}
+
+message CreateRequest {
+  string username = 1;
+  uint32 privateRole = 2;
+}
+
+message CreateResponse {
+  string password = 1;
+}
+
+message GetPagedRequest {
+  v1.PagedFilter filter = 1;
+}
+
+message GetPagedResponse {
+  repeated User items = 1;
+  uint64 totalItems = 2;
+}
+
+message UpdateRequest {
+  User user = 1;
+}
+
+message UpdateResponse {
+}
+
+message DeleteRequest {
+  string uuid = 1;
+}
+
+message DeleteResponse {
+}
+
+message GetRequest {
+  string uuid = 1;
 }
 
 service UserService {
@@ -63,6 +111,38 @@ service UserService {
       post: "/api/v1/users/register",
       body: "*",
       response_body: "*",
+    };
+  }
+  rpc Get(GetRequest) returns (User) {
+    option (google.api.http) = {
+      get: "/api/v1/users/{uuid}"
+      response_body: "*"
+    };
+  }
+  rpc GetPaged(GetPagedRequest) returns (GetPagedResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/users/list",
+      body: "*",
+      response_body: "*"
+    };
+  }
+  rpc Create(CreateRequest) returns (CreateResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/users",
+      body: "*",
+      response_body: "*"
+    };
+  }
+  rpc Update(UpdateRequest) returns (UpdateResponse) {
+    option (google.api.http) = {
+      put: "/api/v1/users/{user.uuid}",
+      body: "*",
+      response_body: "*"
+    };
+  }
+  rpc Delete(DeleteRequest) returns (DeleteResponse) {
+    option (google.api.http) = {
+      delete: "/api/v1/users/{uuid}",
     };
   }
 }

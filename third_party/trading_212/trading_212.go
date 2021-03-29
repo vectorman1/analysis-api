@@ -41,10 +41,10 @@ func (s *ExternalSymbolService) GetLatest(ctx context.Context) (*[]*proto_models
 
 	var htmlRes string
 	err := chromedp.Run(tbctx,
-		chromedp.Navigate(common.TRADING212_INSTRUMENTS_LINK),
-		chromedp.WaitVisible(common.TRADING212_SHOW_ALL_BUTTON_SELECTOR),
-		chromedp.Click(common.TRADING212_SHOW_ALL_BUTTON_SELECTOR),
-		chromedp.InnerHTML(common.TRADING212_ALL_INSTRUMENTS_SELECTOR, &htmlRes))
+		chromedp.Navigate(common.Trading212InstrumentsLink),
+		chromedp.WaitVisible(common.Trading212ShowAllButtonSelector),
+		chromedp.Click(common.Trading212ShowAllButtonSelector),
+		chromedp.InnerHTML(common.Trading212AllInstrumentsSelector, &htmlRes))
 	if err != nil {
 		alaskalog.Logger.Warnf("failed to get 212 webpage: %v", err)
 		return nil, err
@@ -113,7 +113,7 @@ func getSymbolData(row []string) (*proto_models.Symbol, error) {
 	marketName := strings.TrimSpace(row[5])
 	marketHours := strings.TrimSpace(row[6])
 
-	ns, err := uuid.FromString(common.SYMBOLS_NAMCESPACE)
+	ns, err := uuid.FromString(common.SymbolsNamespace)
 	if err != nil {
 		return nil, err
 	}

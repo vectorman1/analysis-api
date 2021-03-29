@@ -2,8 +2,11 @@ package service
 
 import (
 	"context"
-	"sync"
 	"time"
+
+	"google.golang.org/grpc/grpclog"
+
+	"github.com/vectorman1/analysis/analysis-api/common"
 
 	"github.com/vectorman1/analysis/analysis-api/generated/worker_symbol_service"
 
@@ -15,10 +18,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"google.golang.org/grpc/grpclog"
-
-	"github.com/vectorman1/analysis/analysis-api/common"
-
 	"github.com/jackc/pgx"
 
 	"github.com/vectorman1/analysis/analysis-api/db"
@@ -26,17 +25,19 @@ import (
 	"github.com/vectorman1/analysis/analysis-api/generated/symbol_service"
 )
 
-type symbolService interface {
+type SymbolServiceContract interface {
 	// repo methods
-	GetPaged(ctx context.Context, req *symbol_service.ReadPagedRequest) (*[]*proto_models.Symbol, uint, error)
-	Details(ctx context.Context, req *symbol_service.SymbolDetailsRequest) (*symbol_service.SymbolDetailsResponse, error)
+	Get(ctx context.Context, uuid string) (*proto_models.Symbol, error)
+	GetPaged(ctx context.Context, req *symbol_service.GetPagedRequest) (*[]*proto_models.Symbol, uint, error)
+	Overview(ctx context.Context, req *symbol_service.SymbolOverviewRequest) (*symbol_service.SymbolOverview, error)
 
 	// service methods
-	Recalculate(ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error)
+	UpdateAll(ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error)
 	processRecalculationResponse(
 		input []*worker_symbol_service.RecalculateSymbolsResponse,
 		ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error)
 	symbolDataToEntity(in *[]*proto_models.Symbol) ([]*entities.Symbol, error)
+	filterUnusableSymbols(symbols *[]*proto_models.Symbol) *[]*proto_models.Symbol
 }
 
 type SymbolService struct {
@@ -44,6 +45,15 @@ type SymbolService struct {
 	symbolOverviewRepository *db.SymbolOverviewRepository
 	alphaVantageService      *alpha_vantage.AlphaVantageService
 	externalSymbolService    *trading_212.ExternalSymbolService
+}
+
+func (s *SymbolService) Get(ctx context.Context, uuid string) (*proto_models.Symbol, error) {
+	sym, err := s.symbolRepository.GetByUuid(ctx, uuid)
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "invalid symbol uuid")
+	}
+
+	return sym.ToProto(), nil
 }
 
 func NewSymbolService(
@@ -59,7 +69,7 @@ func NewSymbolService(
 	}
 }
 
-func (s *SymbolService) GetPaged(ctx context.Context, req *symbol_service.ReadPagedRequest) (*[]*proto_models.Symbol, uint, error) {
+func (s *SymbolService) GetPaged(ctx context.Context, req *symbol_service.GetPagedRequest) (*[]*proto_models.Symbol, uint, error) {
 	if req.Filter == nil {
 		return nil, 0, status.Errorf(codes.InvalidArgument, "provide filter")
 	}
@@ -80,7 +90,7 @@ func (s *SymbolService) GetPaged(ctx context.Context, req *symbol_service.ReadPa
 	return &res, totalItemsCount, nil
 }
 
-func (s *SymbolService) Details(ctx context.Context, req *symbol_service.SymbolDetailsRequest) (*symbol_service.SymbolDetailsResponse, error) {
+func (s *SymbolService) Overview(ctx context.Context, req *symbol_service.SymbolOverviewRequest) (*symbol_service.SymbolOverview, error) {
 	userInfo := ctx.Value("user_info")
 	if userInfo == nil {
 		return nil, status.Error(codes.Unauthenticated, "provide user token")
@@ -88,7 +98,7 @@ func (s *SymbolService) Details(ctx context.Context, req *symbol_service.SymbolD
 
 	symbol, err := s.symbolRepository.GetByUuid(ctx, req.Uuid)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.NotFound, "invalid symbol uuid")
 	}
 
 	overview, err := s.symbolOverviewRepository.GetBySymbolUuid(ctx, req.Uuid)
@@ -110,15 +120,12 @@ func (s *SymbolService) Details(ctx context.Context, req *symbol_service.SymbolD
 		overview = newOverview
 	}
 
-	return &symbol_service.SymbolDetailsResponse{
-		Symbol:  symbol.ToProto(),
-		Details: overview.ToProto(),
-	}, nil
+	return overview.ToProto(), nil
 }
 
-func (s *SymbolService) Recalculate(ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error) {
-	oldSymbols, _, err := s.GetPaged(ctx, &symbol_service.ReadPagedRequest{
-		Filter: &symbol_service.SymbolFilter{
+func (s *SymbolService) UpdateAll(ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error) {
+	oldSymbols, _, err := s.GetPaged(ctx, &symbol_service.GetPagedRequest{
+		Filter: &proto_models.PagedFilter{
 			PageSize:   100000,
 			PageNumber: 1,
 			Order:      "identifier",
@@ -134,6 +141,7 @@ func (s *SymbolService) Recalculate(ctx context.Context) (*symbol_service.Recalc
 		return nil, err
 	}
 
+	externalSymbols = s.filterUnusableSymbols(externalSymbols)
 	result := s.generateRecalculationResult(*externalSymbols, *oldSymbols)
 	response, err := s.processRecalculationResponse(result, ctx)
 	if err != nil {
@@ -235,91 +243,90 @@ func (s *SymbolService) symbolDataToEntity(in *[]*proto_models.Symbol) ([]*entit
 }
 
 func (s *SymbolService) generateRecalculationResult(newSymbols []*proto_models.Symbol, oldSymbols []*proto_models.Symbol) []*worker_symbol_service.RecalculateSymbolsResponse {
-	var wg sync.WaitGroup
-	unique := sync.Map{}
-	// generate create, update and ignore responses
-	for _, newSym := range newSymbols {
-		go func(wg *sync.WaitGroup, s *proto_models.Symbol) {
-			wg.Add(1)
-			defer wg.Done()
-
-			mapValue, exists := unique.Load(s.Uuid)
-			if !exists {
-				if ok, oldSym := common.ContainsSymbol(s.Uuid, oldSymbols); !ok {
-					if !ok {
-						wg.Add(1)
-						defer wg.Done()
-						unique.Store(s.Uuid,
-							&worker_symbol_service.RecalculateSymbolsResponse{
-								Type:   worker_symbol_service.RecalculateSymbolsResponse_CREATE,
-								Symbol: s,
-							})
-						return
-					}
-				} else {
-					// check if any fields from the new symbol are different from the old
-					shouldUpdate := false
-					if oldSym.Name != s.Name {
-						shouldUpdate = true
-					} else if oldSym.MarketHoursGmt != s.MarketHoursGmt {
-						shouldUpdate = true
-					}
-
-					// Identifier, ISIN and Market Name are not checked, as they are used in the uuids of the symbols
-					// if any fields are updated, send and update response, otherwise, send it back and ignore it
-					if shouldUpdate {
-						unique.Store(s.Uuid,
-							&worker_symbol_service.RecalculateSymbolsResponse{
-								Type:   worker_symbol_service.RecalculateSymbolsResponse_UPDATE,
-								Symbol: s,
-							})
-						return
-					} else {
-						unique.Store(s.Uuid,
-							&worker_symbol_service.RecalculateSymbolsResponse{
-								Type:   worker_symbol_service.RecalculateSymbolsResponse_IGNORE,
-								Symbol: s,
-							})
-						return
-					}
-				}
-			} else {
-				grpclog.Infoln("collision while checking for CREATE , UPDATE OR IGNORE - existing:", mapValue)
-				grpclog.Infoln("new: ", s)
-			}
-		}(&wg, newSym)
-	}
-
-	// generate delete responses
-	for _, oldSym := range oldSymbols {
-		go func(wg *sync.WaitGroup, s *proto_models.Symbol) {
-			wg.Add(1)
-			defer wg.Done()
-
-			mapValue, exists := unique.Load(s.Uuid)
-			if !exists {
-				if ok, _ := common.ContainsSymbol(s.Uuid, newSymbols); !ok {
-					unique.Store(s.Uuid,
-						&worker_symbol_service.RecalculateSymbolsResponse{
-							Type:   worker_symbol_service.RecalculateSymbolsResponse_DELETE,
-							Symbol: s,
-						})
-					return
-				}
-			} else {
-				grpclog.Infoln("collision while checking for DELETE - existing:", mapValue)
-				grpclog.Infoln("new: ", s)
-			}
-		}(&wg, oldSym)
-	}
-
-	wg.Wait()
-
 	var result []*worker_symbol_service.RecalculateSymbolsResponse
-	unique.Range(func(k, v interface{}) bool {
-		result = append(result, v.(*worker_symbol_service.RecalculateSymbolsResponse))
-		return true
-	})
+	unique := make(map[string]*worker_symbol_service.RecalculateSymbolsResponse)
+	output := make(chan *worker_symbol_service.RecalculateSymbolsResponse)
+
+	go func() {
+		for _, newSym := range newSymbols {
+			if ok, oldSym := common.ContainsSymbol(newSym.Uuid, oldSymbols); !ok {
+				output <- &worker_symbol_service.RecalculateSymbolsResponse{
+					Type:   worker_symbol_service.RecalculateSymbolsResponse_CREATE,
+					Symbol: newSym,
+				}
+				continue
+			} else {
+				shouldUpdate := false
+				if oldSym.Name != newSym.Name {
+					shouldUpdate = true
+				} else if oldSym.MarketHoursGmt != newSym.MarketHoursGmt {
+					shouldUpdate = true
+				}
+				// Identifier, ISIN and Market Name are not checked, as they are used in the uuids of the symbols
+				// if any fields are updated, send an update response
+				if shouldUpdate {
+					output <- &worker_symbol_service.RecalculateSymbolsResponse{
+						Type:   worker_symbol_service.RecalculateSymbolsResponse_UPDATE,
+						Symbol: newSym,
+					}
+					continue
+				} else {
+					output <- &worker_symbol_service.RecalculateSymbolsResponse{
+						Type:   worker_symbol_service.RecalculateSymbolsResponse_IGNORE,
+						Symbol: newSym,
+					}
+				}
+			}
+		}
+
+		for _, sym := range oldSymbols {
+			if ok, _ := common.ContainsSymbol(sym.Uuid, newSymbols); !ok {
+				output <- &worker_symbol_service.RecalculateSymbolsResponse{
+					Type:   worker_symbol_service.RecalculateSymbolsResponse_DELETE,
+					Symbol: sym,
+				}
+			}
+		}
+
+		close(output)
+	}()
+
+	for res := range output {
+		if existing := unique[res.Symbol.Uuid]; existing == nil {
+			unique[res.Symbol.Uuid] = res
+		} else {
+			grpclog.Infof(
+				"symbol update collision - new type: %d - existing type: %d (new, existing): %s, %s - %s, %s",
+				res.Type, existing.Type,
+				res.Symbol.Name, existing.Symbol.Name,
+				res.Symbol.MarketHoursGmt, existing.Symbol.MarketHoursGmt)
+		}
+	}
+
+	for _, res := range unique {
+		result = append(result, res)
+	}
 
 	return result
+}
+
+func (s *SymbolService) filterUnusableSymbols(symbols *[]*proto_models.Symbol) *[]*proto_models.Symbol {
+	var res []*proto_models.Symbol
+
+	for _, sym := range *symbols {
+		switch sym.MarketName {
+		case common.MarketNASDAQ:
+			res = append(res, sym)
+		case common.MarketNYSE:
+			res = append(res, sym)
+		case common.MarketNonISANYSE:
+			res = append(res, sym)
+		case common.MarketNonISAOTCMarkets:
+			res = append(res, sym)
+		default:
+			continue
+		}
+	}
+
+	return &res
 }

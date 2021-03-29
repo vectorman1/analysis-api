@@ -27,7 +27,7 @@ func NewSymbolOverviewRepository(mongodb *mongo.Database) *SymbolOverviewReposit
 }
 
 func (r *SymbolOverviewRepository) Insert(ctx context.Context, overview *documents.SymbolOverview) (bool, error) {
-	_, err := r.mondodb.Collection(common.OVERVIEWS_COLLECTION).
+	_, err := r.mondodb.Collection(common.OverviewsCollection).
 		InsertOne(ctx, overview)
 	if err != nil {
 		return false, err
@@ -38,7 +38,7 @@ func (r *SymbolOverviewRepository) Insert(ctx context.Context, overview *documen
 
 func (r *SymbolOverviewRepository) GetBySymbolUuid(ctx context.Context, uuid string) (*documents.SymbolOverview, error) {
 	var overview documents.SymbolOverview
-	err := r.mondodb.Collection(common.OVERVIEWS_COLLECTION).
+	err := r.mondodb.Collection(common.OverviewsCollection).
 		FindOne(ctx, bson.M{"symboluuid": uuid}).
 		Decode(&overview)
 	if err != nil {

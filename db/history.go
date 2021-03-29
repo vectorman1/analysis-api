@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -14,14 +15,13 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type historyRepository interface {
-	InsertMany(ctx context.Context, list []documents.History) (int, error)
-	GetSymbolHistory(ctx context.Context, symbolUuid string, startDate time.Time, endDate time.Time) (*[]documents.History, error)
-	GetLastSymbolHistory(ctx context.Context, symbolUuid string) (*documents.History, error)
+type HistoryRepositoryContract interface {
+	InsertMany(ctx context.Context, list *[]documents.History) (int, error)
+	GetSymbolHistory(ctx context.Context, symbolUuid string, startDate time.Time, endDate time.Time, desc bool) (*[]documents.History, error)
+	GetLastSymbolHistory(ctx context.Context, symbolUuid string) (*documents.LastHistory, error)
 }
 
 type HistoryRepository struct {
-	historyRepository
 	mongodb *mongo.Database
 }
 
@@ -37,7 +37,7 @@ func (r *HistoryRepository) InsertMany(ctx context.Context, list *[]documents.Hi
 		e = append(e, v)
 	}
 
-	res, err := r.mongodb.Collection(common.HISTORIES_COLLECTION).
+	res, err := r.mongodb.Collection(common.HistoriesCollection).
 		InsertMany(ctx, e)
 	if err != nil {
 		return 0, err
@@ -46,9 +46,13 @@ func (r *HistoryRepository) InsertMany(ctx context.Context, list *[]documents.Hi
 	return len(res.InsertedIDs), nil
 }
 
-func (r *HistoryRepository) GetSymbolHistory(ctx context.Context, symbolUuid string, startDate time.Time, endDate time.Time) (*[]documents.History, error) {
+func (r *HistoryRepository) GetSymbolHistory(ctx context.Context, symbolUuid string, startDate time.Time, endDate time.Time, desc bool) (*[]documents.History, error) {
 	opts := options.Find()
-	opts.SetSort(bson.D{{"timestamp", -1}})
+	if desc {
+		opts.SetSort(bson.D{{"timestamp", -1}})
+	} else {
+		opts.SetSort(bson.D{{"timestamp", 1}})
+	}
 	filter := bson.M{
 		"symboluuid": symbolUuid,
 		"$and": []bson.M{
@@ -65,7 +69,7 @@ func (r *HistoryRepository) GetSymbolHistory(ctx context.Context, symbolUuid str
 		},
 	}
 
-	filterCursor, err := r.mongodb.Collection(common.HISTORIES_COLLECTION).
+	filterCursor, err := r.mongodb.Collection(common.HistoriesCollection).
 		Find(ctx, filter, opts)
 	if err != nil {
 		return nil, err
@@ -85,18 +89,43 @@ func (r *HistoryRepository) GetSymbolHistory(ctx context.Context, symbolUuid str
 	return &result, nil
 }
 
-func (r *HistoryRepository) GetLastSymbolHistory(ctx context.Context, symbolUuid string) (*documents.History, error) {
-	opts := options.FindOne()
-	opts.SetSort(bson.D{{"timestamp", -1}})
-	filter := bson.M{
-		"symboluuid": symbolUuid,
+func (r *HistoryRepository) GetLastSymbolHistory(ctx context.Context, symbolUuid string) (*documents.LastHistory, error) {
+	pipeline := []bson.M{
+		bson.M{
+			"$match": bson.M{
+				"symboluuid": symbolUuid,
+			},
+		},
+		bson.M{
+			"$group": bson.M{
+				"_id": "$symboluuid",
+				"timestamp": bson.M{
+					"$last": "$timestamp",
+				},
+			},
+		},
+		bson.M{
+			"$sort": bson.M{
+				"timestamp": -1,
+			},
+		},
 	}
 
-	var res documents.History
-	err := r.mongodb.Collection(common.HISTORIES_COLLECTION).
-		FindOne(ctx, filter, opts).Decode(&res)
+	var res documents.LastHistory
+	curr, err := r.mongodb.Collection(common.HistoriesCollection).
+		Aggregate(ctx, pipeline)
 	if err != nil {
 		return nil, err
+	}
+	defer curr.Close(ctx)
+
+	if curr.Next(ctx) {
+		err = curr.Decode(&res)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, fmt.Errorf("no next in cursor")
 	}
 
 	return &res, nil

@@ -31,16 +31,16 @@ func RunServer(ctx context.Context, config *common.Config) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	mux := runtime.NewServeMux()
+	gwmux := runtime.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithInsecure()}
 
-	if err := symbol_service.RegisterSymbolServiceHandlerFromEndpoint(ctx, mux, "0.0.0.0:"+config.GRPCPort, opts); err != nil {
+	if err := symbol_service.RegisterSymbolServiceHandlerFromEndpoint(ctx, gwmux, "0.0.0.0:"+config.GRPCPort, opts); err != nil {
 		logger_grpc.Log.Fatal("failed to start HTTP gateway", zap.String("reason", err.Error()))
 	}
-	if err := user_service.RegisterUserServiceHandlerFromEndpoint(ctx, mux, "0.0.0.0:"+config.GRPCPort, opts); err != nil {
+	if err := user_service.RegisterUserServiceHandlerFromEndpoint(ctx, gwmux, "0.0.0.0:"+config.GRPCPort, opts); err != nil {
 		logger_grpc.Log.Fatal("failed to start HTTP gateway", zap.String("reason", err.Error()))
 	}
-	if err := history_service.RegisterHistoryServiceHandlerFromEndpoint(ctx, mux, "0.0.0.0:"+config.GRPCPort, opts); err != nil {
+	if err := history_service.RegisterHistoryServiceHandlerFromEndpoint(ctx, gwmux, "0.0.0.0:"+config.GRPCPort, opts); err != nil {
 		logger_grpc.Log.Fatal("failed to start HTTP gateway", zap.String("reason", err.Error()))
 	}
 
@@ -48,12 +48,12 @@ func RunServer(ctx context.Context, config *common.Config) error {
 	if config.AllowedOrigin == "*" {
 		srv = &http.Server{
 			Addr:    "0.0.0.0:" + config.HTTPPort,
-			Handler: tracer_rest.AddRequestID(logger_rest.AddLogger(logger_grpc.Log, allowCORS(mux, config.AllowedOrigin))),
+			Handler: tracer_rest.AddRequestID(logger_rest.AddLogger(logger_grpc.Log, allowCORS(gwmux, config.AllowedOrigin))),
 		}
 	} else {
 		srv = &http.Server{
 			Addr:    "0.0.0.0:" + config.HTTPPort,
-			Handler: tracer_rest.AddRequestID(logger_rest.AddLogger(logger_grpc.Log, mux)),
+			Handler: tracer_rest.AddRequestID(logger_rest.AddLogger(logger_grpc.Log, gwmux)),
 		}
 	}
 

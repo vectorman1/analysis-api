@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/vectorman1/analysis/analysis-api/generated/proto_models"
+
 	"google.golang.org/grpc/grpclog"
 
 	"github.com/vectorman1/analysis/analysis-api/generated/symbol_service"
@@ -55,7 +57,7 @@ func (s *HistoryService) GetSymbolHistory(ctx context.Context, req *history_serv
 
 	start := req.StartDate.AsTime()
 	end := req.EndDate.AsTime()
-	result, err := s.historyRepository.GetSymbolHistory(ctx, req.SymbolUuid, start, end)
+	result, err := s.historyRepository.GetSymbolHistory(ctx, req.SymbolUuid, start, end, true)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +115,7 @@ func (s *HistoryService) UpdateSymbolHistory(ctx context.Context, symUuid string
 			// get last 150 history entries to pass to calculation method
 			// it does further checks for each type of indicator
 			// - e.g. min. 120 for MA120
-			previous, err := s.historyRepository.GetSymbolHistory(ctx, symUuid, lastHistory.CreatedAt.Add(-(150 * (24 * time.Hour))), time.Now())
+			previous, err := s.historyRepository.GetSymbolHistory(ctx, symUuid, lastHistory.Timestamp.Add(-(150 * (24 * time.Hour))), time.Now(), false)
 			if err != nil {
 				return 0, err
 			}
@@ -140,7 +142,7 @@ func (s *HistoryService) GetChartBySymbolUuid(ctx context.Context, req *history_
 		return nil, status.Errorf(codes.InvalidArgument, "invalid date")
 	}
 
-	histories, err := s.historyRepository.GetSymbolHistory(ctx, req.SymbolUuid, req.StartDate.AsTime(), req.EndDate.AsTime())
+	histories, err := s.historyRepository.GetSymbolHistory(ctx, req.SymbolUuid, req.StartDate.AsTime(), req.EndDate.AsTime(), false)
 	if err != nil {
 		return nil, err
 	}
@@ -154,10 +156,8 @@ func (s *HistoryService) GetChartBySymbolUuid(ctx context.Context, req *history_
 		values = append(values, h.Low)
 		values = append(values, h.High)
 
-		res.Value = append(res.Value, &history_service.ChartValue{
-			Date:   h.Timestamp.Format("2006-01-02"),
-			Values: values,
-		})
+		res.Dates = append(res.Dates, h.Timestamp.Format("2006-01-02"))
+		res.ChartDays = append(res.ChartDays, &history_service.ChartDay{Values: values})
 	}
 
 	return &res, nil
@@ -166,8 +166,8 @@ func (s *HistoryService) GetChartBySymbolUuid(ctx context.Context, req *history_
 func (s *HistoryService) UpdateAll(ctx context.Context) error {
 	res, _, err := s.symbolRepository.GetPaged(
 		context.Background(),
-		&symbol_service.ReadPagedRequest{
-			Filter: &symbol_service.SymbolFilter{
+		&symbol_service.GetPagedRequest{
+			Filter: &proto_models.PagedFilter{
 				PageSize:   100000,
 				PageNumber: 1,
 				Order:      "identifier",
@@ -190,7 +190,7 @@ func (s *HistoryService) UpdateAll(ctx context.Context) error {
 
 			var u string
 			sym.Uuid.AssignTo(&u)
-			ctx, c := context.WithTimeout(ctx, 5*time.Second)
+			ctx, c := context.WithTimeout(ctx, 10*time.Second)
 			entries, err := s.UpdateSymbolHistory(ctx, u, sym.Identifier)
 			c()
 			if err != nil {

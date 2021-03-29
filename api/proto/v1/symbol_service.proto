@@ -34,19 +34,11 @@ option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
   }
 };
 
-message SymbolFilter {
-  uint64 pageSize = 1;
-  uint64 pageNumber = 2;
-  string order = 3;
-  bool ascending = 4;
-  string text = 5;
+message GetPagedRequest {
+  v1.PagedFilter filter = 1;
 }
 
-message ReadPagedRequest {
-  SymbolFilter filter = 1;
-}
-
-message ReadPagedResponse {
+message GetPagedResponse {
   repeated v1.Symbol items = 1;
   uint64 totalItems = 2;
 }
@@ -170,25 +162,30 @@ message SymbolOverview {
   google.protobuf.Timestamp updatedAt = 54;
 }
 
-message SymbolDetailsRequest {
+message SymbolOverviewRequest {
   string uuid = 1;
 }
 
-message SymbolDetailsResponse {
-  v1.Symbol symbol = 1;
-  SymbolOverview details = 2;
+message SymbolRequest {
+  string uuid = 1;
 }
 
+
 service SymbolService {
-  rpc ReadPaged (ReadPagedRequest) returns (ReadPagedResponse) {
+  rpc GetPaged (GetPagedRequest) returns (GetPagedResponse) {
     option (google.api.http) = {
       post: "/api/v1/symbols/paged",
       body: "*"
     };
   }
-  rpc Details (SymbolDetailsRequest) returns (SymbolDetailsResponse) {
+  rpc Overview (SymbolOverviewRequest) returns (SymbolOverview) {
     option (google.api.http) = {
-      get: "/api/v1/symbols/{uuid}/details"
+      get: "/api/v1/symbols/{uuid}/overview"
+    };
+  }
+  rpc Get (SymbolRequest) returns (v1.Symbol) {
+    option (google.api.http) = {
+      get: "/api/v1/symbols/{uuid}"
     };
   }
   rpc StartUpdateJob (StartUpdateJobRequest) returns (StartUpdateJobResponse) {
