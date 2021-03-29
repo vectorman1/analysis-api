@@ -379,6 +379,8 @@ github.com/orandin/lumberjackrus v1.0.1/go.mod h1:xYLt6H8W93pKnQgUQaxsApS0Eb4BwH
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
 github.com/pelletier/go-toml v1.7.0/go.mod h1:vwGMzjaWMwyfHwgIBhI2YUM4fB6nL6lVAvS1LBMMhTE=
+github.com/philips/go-bindata-assetfs v0.0.0-20150624150248-3dcc96556217 h1:d0gvU83WNkaQFi/xS0KbHf8G8cXwowAFcoZnIYlmPiE=
+github.com/philips/go-bindata-assetfs v0.0.0-20150624150248-3dcc96556217/go.mod h1:fFa4wLHd7+D2mWRwlStkwVYMtIc/+odU35B0qn/x4WU=
 github.com/piquette/finance-go v1.0.0 h1:0nHbZCbhAsUMUt18oTgy5bHQfPRGhcNA0EbpxNRsZAA=
 github.com/piquette/finance-go v1.0.0/go.mod h1:H51NoGFnfu41Un/Fp0aAhS2lLRFBiiwHhMsV59bXAI0=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
