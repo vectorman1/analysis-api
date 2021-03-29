@@ -2,7 +2,10 @@ package rest_server
 
 import (
 	"context"
+	"mime"
 	"strings"
+
+	"github.com/vectorman1/analysis/analysis-api/pkg/ui/data/swagger"
 
 	"github.com/vectorman1/analysis/analysis-api/generated/history_service"
 
@@ -24,6 +27,8 @@ import (
 	tracer_rest "github.com/vectorman1/analysis/analysis-api/middleware/tracer-rest"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+
+	assetfs "github.com/philips/go-bindata-assetfs"
 )
 
 // RunServer runs HTTP/REST gateway
@@ -31,16 +36,16 @@ func RunServer(ctx context.Context, config *common.Config) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	mux := runtime.NewServeMux()
+	gwmux := runtime.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithInsecure()}
 
-	if err := symbol_service.RegisterSymbolServiceHandlerFromEndpoint(ctx, mux, "0.0.0.0:"+config.GRPCPort, opts); err != nil {
+	if err := symbol_service.RegisterSymbolServiceHandlerFromEndpoint(ctx, gwmux, "0.0.0.0:"+config.GRPCPort, opts); err != nil {
 		logger_grpc.Log.Fatal("failed to start HTTP gateway", zap.String("reason", err.Error()))
 	}
-	if err := user_service.RegisterUserServiceHandlerFromEndpoint(ctx, mux, "0.0.0.0:"+config.GRPCPort, opts); err != nil {
+	if err := user_service.RegisterUserServiceHandlerFromEndpoint(ctx, gwmux, "0.0.0.0:"+config.GRPCPort, opts); err != nil {
 		logger_grpc.Log.Fatal("failed to start HTTP gateway", zap.String("reason", err.Error()))
 	}
-	if err := history_service.RegisterHistoryServiceHandlerFromEndpoint(ctx, mux, "0.0.0.0:"+config.GRPCPort, opts); err != nil {
+	if err := history_service.RegisterHistoryServiceHandlerFromEndpoint(ctx, gwmux, "0.0.0.0:"+config.GRPCPort, opts); err != nil {
 		logger_grpc.Log.Fatal("failed to start HTTP gateway", zap.String("reason", err.Error()))
 	}
 
@@ -48,12 +53,12 @@ func RunServer(ctx context.Context, config *common.Config) error {
 	if config.AllowedOrigin == "*" {
 		srv = &http.Server{
 			Addr:    "0.0.0.0:" + config.HTTPPort,
-			Handler: tracer_rest.AddRequestID(logger_rest.AddLogger(logger_grpc.Log, allowCORS(mux, config.AllowedOrigin))),
+			Handler: tracer_rest.AddRequestID(logger_rest.AddLogger(logger_grpc.Log, allowCORS(gwmux, config.AllowedOrigin))),
 		}
 	} else {
 		srv = &http.Server{
 			Addr:    "0.0.0.0:" + config.HTTPPort,
-			Handler: tracer_rest.AddRequestID(logger_rest.AddLogger(logger_grpc.Log, mux)),
+			Handler: tracer_rest.AddRequestID(logger_rest.AddLogger(logger_grpc.Log, gwmux)),
 		}
 	}
 
@@ -92,4 +97,17 @@ func allowCORS(h http.Handler, allowedOrigin string) http.Handler {
 		}
 		h.ServeHTTP(w, r)
 	})
+}
+
+func serveSwagger(mux *http.ServeMux) {
+	mime.AddExtensionType(".svg", "image/svg+xml")
+
+	// Expose files in third_party/swagger-ui/ on <host>/swagger-ui
+	fileServer := http.FileServer(&assetfs.AssetFS{
+		Asset:    swagger.Asset,
+		AssetDir: swagger.AssetDir,
+		Prefix:   "third_party/swagger-ui",
+	})
+	prefix := "/swagger-ui/"
+	mux.Handle(prefix, http.StripPrefix(prefix, fileServer))
 }
