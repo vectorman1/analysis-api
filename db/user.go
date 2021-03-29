@@ -96,7 +96,7 @@ func (r *UserRepository) GetPaged(ctx context.Context, filter *proto_models.Page
 func (r *UserRepository) Create(ctx context.Context, user *entities.User) error {
 	query, args, err := squirrel.
 		Insert("\"user\".users").
-		Columns("uuid, private_role, username, password, created_at, updated_at").
+		Columns("uuid, privateRole, username, password, createdAt, updatedAt").
 		Values(&user.Uuid, &user.PrivateRole, &user.Username, &user.Password, time.Now(), time.Now()).
 		PlaceholderFormat(squirrel.Dollar).
 		ToSql()
@@ -118,8 +118,8 @@ func (r *UserRepository) Update(ctx context.Context, user *entities.User) error 
 		Where(squirrel.Eq{"uuid": user.Uuid}).
 		Set("username", user.Username).
 		Set("password", user.Password).
-		Set("updated_at", time.Now()).
-		Set("private_role", user.PrivateRole).
+		Set("updatedAt", time.Now()).
+		Set("privateRole", user.PrivateRole).
 		PlaceholderFormat(squirrel.Dollar).
 		ToSql()
 	if err != nil {
@@ -138,7 +138,7 @@ func (r *UserRepository) Delete(ctx context.Context, uuid string) error {
 	query, args, err := squirrel.
 		Update("\"user\".users").
 		Where(squirrel.Eq{"uuid": uuid}).
-		Set("deleted_at", time.Now()).
+		Set("deletedAt", time.Now()).
 		ToSql()
 	if err != nil {
 		return err
