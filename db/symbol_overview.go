@@ -11,9 +11,10 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type SymbolOverviewRepo interface {
+type SymbolOverviewContract interface {
 	Insert(ctx context.Context, overview *documents.SymbolOverview) (bool, error)
 	GetBySymbolUuid(ctx context.Context, uuid string) (*documents.SymbolOverview, error)
+	Delete(ctx context.Context, uuid string) error
 }
 
 type SymbolOverviewRepository struct {
@@ -44,5 +45,16 @@ func (r *SymbolOverviewRepository) GetBySymbolUuid(ctx context.Context, uuid str
 	if err != nil {
 		return nil, err
 	}
+
 	return &overview, nil
+}
+
+func (r *SymbolOverviewRepository) Delete(ctx context.Context, uuid string) error {
+	_, err := r.mondodb.Collection(common.OverviewsCollection).
+		DeleteOne(ctx, bson.M{"symboluuid": uuid})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
