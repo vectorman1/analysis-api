@@ -98,7 +98,9 @@ func (r *HistoryRepository) GetLastSymbolHistory(ctx context.Context, symbolUuid
 		},
 		bson.M{
 			"$group": bson.M{
-				"_id": "$symboluuid",
+				"close": bson.M{
+					"$last": "$close",
+				},
 				"timestamp": bson.M{
 					"$last": "$timestamp",
 				},
