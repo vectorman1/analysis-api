@@ -217,7 +217,7 @@ func (r *SymbolRepository) DeleteBulk(tx *pgx.Tx, ctx context.Context, symbols [
 			q := squirrel.Update("analysis.symbols")
 
 			q = q.
-				Set("deleted_at", now).
+				Set("deletedAt", now).
 				PlaceholderFormat(squirrel.Dollar).
 				Where(squirrel.Eq{"uuid::text": u})
 
@@ -268,7 +268,7 @@ func (r *SymbolRepository) UpdateBulk(tx *pgx.Tx, ctx context.Context, symbols [
 			q = q.
 				Set("name", sym.Name).
 				Set("marketHoursGmt", sym.MarketHoursGmt).
-				Set("updated_at", now).
+				Set("updatedAt", now).
 				Where(squirrel.Eq{"uuid::text": u})
 
 			query, args, _ := q.ToSql()
