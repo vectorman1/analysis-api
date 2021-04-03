@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math/rand"
 
+	"github.com/jackc/pgx"
+
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/status"
 
@@ -38,7 +40,13 @@ func GetErrorStatus(err error) error {
 		}
 		switch err.(type) {
 		default:
-			grpclog.Infoln("error type:", err, err.Error())
+		case pgx.PgError:
+			pge, _ := err.(pgx.PgError)
+			switch pge.Code {
+			default:
+			}
+			grpclog.Infoln("error type:",
+				err.(pgx.PgError).Code, err.Error())
 		}
 		return err
 	}
