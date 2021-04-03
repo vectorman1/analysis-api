@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	validationErrors "github.com/vectorman1/analysis/analysis-api/common/errors"
+
 	"github.com/vectorman1/analysis/analysis-api/generated/proto_models"
 
 	"google.golang.org/grpc/grpclog"
@@ -145,6 +147,9 @@ func (s *HistoryService) GetChartBySymbolUuid(ctx context.Context, req *history_
 	histories, err := s.historyRepository.GetSymbolHistory(ctx, req.SymbolUuid, req.StartDate.AsTime(), req.EndDate.AsTime(), false)
 	if err != nil {
 		return nil, err
+	}
+	if len(*histories) == 0 {
+		return nil, status.Error(codes.NotFound, validationErrors.NoHistoryFoundForSymbol)
 	}
 
 	var res history_service.GetChartBySymbolUuidResponse
