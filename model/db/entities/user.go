@@ -1,9 +1,9 @@
 package entities
 
 import (
-	"github.com/golang/protobuf/ptypes"
 	"github.com/jackc/pgtype"
 	"github.com/vectorman1/analysis/analysis-api/generated/user_service"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type PrivateRole uint
@@ -27,8 +27,6 @@ type User struct {
 func (e *User) ToProto() *user_service.User {
 	var u string
 	e.Uuid.AssignTo(&u)
-	createdAt, _ := ptypes.TimestampProto(e.CreatedAt.Time)
-	updatedAt, _ := ptypes.TimestampProto(e.UpdatedAt.Time)
 
 	return &user_service.User{
 		Id:          uint64(e.ID),
@@ -36,7 +34,7 @@ func (e *User) ToProto() *user_service.User {
 		Username:    e.Username,
 		Password:    e.Password,
 		PrivateRole: uint32(e.PrivateRole),
-		CreatedAt:   createdAt,
-		UpdatedAt:   updatedAt,
+		CreatedAt:   timestamppb.New(e.CreatedAt.Time),
+		UpdatedAt:   timestamppb.New(e.UpdatedAt.Time),
 	}
 }

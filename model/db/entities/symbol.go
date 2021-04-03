@@ -1,9 +1,9 @@
 package entities
 
 import (
-	"github.com/golang/protobuf/ptypes"
 	"github.com/jackc/pgtype"
 	"github.com/vectorman1/analysis/analysis-api/generated/proto_models"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type Symbol struct {
@@ -58,16 +58,10 @@ func (s *Symbol) ToProto() *proto_models.Symbol {
 		MinimumOrderQuantity: s.MinimumOrderQuantity.Float,
 		MarketName:           s.MarketName,
 		MarketHoursGmt:       s.MarketHoursGmt,
+		CreatedAt:            timestamppb.New(s.CreatedAt.Time),
+		UpdatedAt:            timestamppb.New(s.UpdatedAt.Time),
+		DeletedAt:            timestamppb.New(s.DeletedAt.Time),
 	}
 
-	if createdAt, err := ptypes.TimestampProto(s.CreatedAt.Time); err == nil {
-		res.CreatedAt = createdAt
-	}
-	if updatedAt, err := ptypes.TimestampProto(s.UpdatedAt.Time); err == nil {
-		res.UpdatedAt = updatedAt
-	}
-	if deletedAt, err := ptypes.TimestampProto(s.DeletedAt.Time); err == nil {
-		res.DeletedAt = deletedAt
-	}
 	return res
 }
