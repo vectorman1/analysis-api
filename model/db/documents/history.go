@@ -3,9 +3,9 @@ package documents
 import (
 	"time"
 
-	"github.com/vectorman1/analysis/analysis-api/generated/history_service"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/golang/protobuf/ptypes"
+	"github.com/vectorman1/analysis/analysis-api/generated/history_service"
 )
 
 type MA struct {
@@ -41,6 +41,7 @@ type Trend struct {
 }
 
 type LastHistory struct {
+	Close     float64
 	Timestamp time.Time
 }
 
@@ -65,8 +66,8 @@ type History struct {
 }
 
 func (h *History) ToProto() *history_service.History {
-	timestamp, _ := ptypes.TimestampProto(h.Timestamp)
-	createdAt, _ := ptypes.TimestampProto(h.CreatedAt)
+	timestamp := timestamppb.New(h.Timestamp)
+	createdAt := timestamppb.New(h.CreatedAt)
 
 	return &history_service.History{
 		Open:      h.Open,
