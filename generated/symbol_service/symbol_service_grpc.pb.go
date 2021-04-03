@@ -21,7 +21,8 @@ type SymbolServiceClient interface {
 	GetPaged(ctx context.Context, in *GetPagedRequest, opts ...grpc.CallOption) (*GetPagedResponse, error)
 	Overview(ctx context.Context, in *SymbolOverviewRequest, opts ...grpc.CallOption) (*SymbolOverview, error)
 	Get(ctx context.Context, in *SymbolRequest, opts ...grpc.CallOption) (*proto_models.Symbol, error)
-	StartUpdateJob(ctx context.Context, in *StartUpdateJobRequest, opts ...grpc.CallOption) (*StartUpdateJobResponse, error)
+	UpdateAll(ctx context.Context, in *StartUpdateJobRequest, opts ...grpc.CallOption) (*UpdateAllResponse, error)
+	UpdateAllJob(ctx context.Context, in *StartUpdateJobRequest, opts ...grpc.CallOption) (*StartUpdateJobResponse, error)
 }
 
 type symbolServiceClient struct {
@@ -59,9 +60,18 @@ func (c *symbolServiceClient) Get(ctx context.Context, in *SymbolRequest, opts .
 	return out, nil
 }
 
-func (c *symbolServiceClient) StartUpdateJob(ctx context.Context, in *StartUpdateJobRequest, opts ...grpc.CallOption) (*StartUpdateJobResponse, error) {
+func (c *symbolServiceClient) UpdateAll(ctx context.Context, in *StartUpdateJobRequest, opts ...grpc.CallOption) (*UpdateAllResponse, error) {
+	out := new(UpdateAllResponse)
+	err := c.cc.Invoke(ctx, "/v1.symbol_service.SymbolService/UpdateAll", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *symbolServiceClient) UpdateAllJob(ctx context.Context, in *StartUpdateJobRequest, opts ...grpc.CallOption) (*StartUpdateJobResponse, error) {
 	out := new(StartUpdateJobResponse)
-	err := c.cc.Invoke(ctx, "/v1.symbol_service.SymbolService/StartUpdateJob", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/v1.symbol_service.SymbolService/UpdateAllJob", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +85,8 @@ type SymbolServiceServer interface {
 	GetPaged(context.Context, *GetPagedRequest) (*GetPagedResponse, error)
 	Overview(context.Context, *SymbolOverviewRequest) (*SymbolOverview, error)
 	Get(context.Context, *SymbolRequest) (*proto_models.Symbol, error)
-	StartUpdateJob(context.Context, *StartUpdateJobRequest) (*StartUpdateJobResponse, error)
+	UpdateAll(context.Context, *StartUpdateJobRequest) (*UpdateAllResponse, error)
+	UpdateAllJob(context.Context, *StartUpdateJobRequest) (*StartUpdateJobResponse, error)
 	mustEmbedUnimplementedSymbolServiceServer()
 }
 
@@ -92,8 +103,11 @@ func (UnimplementedSymbolServiceServer) Overview(context.Context, *SymbolOvervie
 func (UnimplementedSymbolServiceServer) Get(context.Context, *SymbolRequest) (*proto_models.Symbol, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
 }
-func (UnimplementedSymbolServiceServer) StartUpdateJob(context.Context, *StartUpdateJobRequest) (*StartUpdateJobResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method StartUpdateJob not implemented")
+func (UnimplementedSymbolServiceServer) UpdateAll(context.Context, *StartUpdateJobRequest) (*UpdateAllResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateAll not implemented")
+}
+func (UnimplementedSymbolServiceServer) UpdateAllJob(context.Context, *StartUpdateJobRequest) (*StartUpdateJobResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateAllJob not implemented")
 }
 func (UnimplementedSymbolServiceServer) mustEmbedUnimplementedSymbolServiceServer() {}
 
@@ -162,20 +176,38 @@ func _SymbolService_Get_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SymbolService_StartUpdateJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _SymbolService_UpdateAll_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(StartUpdateJobRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SymbolServiceServer).StartUpdateJob(ctx, in)
+		return srv.(SymbolServiceServer).UpdateAll(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/v1.symbol_service.SymbolService/StartUpdateJob",
+		FullMethod: "/v1.symbol_service.SymbolService/UpdateAll",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SymbolServiceServer).StartUpdateJob(ctx, req.(*StartUpdateJobRequest))
+		return srv.(SymbolServiceServer).UpdateAll(ctx, req.(*StartUpdateJobRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SymbolService_UpdateAllJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StartUpdateJobRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SymbolServiceServer).UpdateAllJob(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/v1.symbol_service.SymbolService/UpdateAllJob",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SymbolServiceServer).UpdateAllJob(ctx, req.(*StartUpdateJobRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -197,8 +229,12 @@ var _SymbolService_serviceDesc = grpc.ServiceDesc{
 			Handler:    _SymbolService_Get_Handler,
 		},
 		{
-			MethodName: "StartUpdateJob",
-			Handler:    _SymbolService_StartUpdateJob_Handler,
+			MethodName: "UpdateAll",
+			Handler:    _SymbolService_UpdateAll_Handler,
+		},
+		{
+			MethodName: "UpdateAllJob",
+			Handler:    _SymbolService_UpdateAllJob_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

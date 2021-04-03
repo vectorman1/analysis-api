@@ -169,20 +169,38 @@ func local_request_SymbolService_Get_0(ctx context.Context, marshaler runtime.Ma
 
 }
 
-func request_SymbolService_StartUpdateJob_0(ctx context.Context, marshaler runtime.Marshaler, client SymbolServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_SymbolService_UpdateAll_0(ctx context.Context, marshaler runtime.Marshaler, client SymbolServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq StartUpdateJobRequest
 	var metadata runtime.ServerMetadata
 
-	msg, err := client.StartUpdateJob(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	msg, err := client.UpdateAll(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 
 }
 
-func local_request_SymbolService_StartUpdateJob_0(ctx context.Context, marshaler runtime.Marshaler, server SymbolServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_SymbolService_UpdateAll_0(ctx context.Context, marshaler runtime.Marshaler, server SymbolServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq StartUpdateJobRequest
 	var metadata runtime.ServerMetadata
 
-	msg, err := server.StartUpdateJob(ctx, &protoReq)
+	msg, err := server.UpdateAll(ctx, &protoReq)
+	return msg, metadata, err
+
+}
+
+func request_SymbolService_UpdateAllJob_0(ctx context.Context, marshaler runtime.Marshaler, client SymbolServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq StartUpdateJobRequest
+	var metadata runtime.ServerMetadata
+
+	msg, err := client.UpdateAllJob(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+
+}
+
+func local_request_SymbolService_UpdateAllJob_0(ctx context.Context, marshaler runtime.Marshaler, server SymbolServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq StartUpdateJobRequest
+	var metadata runtime.ServerMetadata
+
+	msg, err := server.UpdateAllJob(ctx, &protoReq)
 	return msg, metadata, err
 
 }
@@ -262,18 +280,18 @@ func RegisterSymbolServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 
 	})
 
-	mux.Handle("POST", pattern_SymbolService_StartUpdateJob_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_SymbolService_UpdateAll_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/v1.symbol_service.SymbolService/StartUpdateJob")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/v1.symbol_service.SymbolService/UpdateAll")
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_SymbolService_StartUpdateJob_0(rctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_SymbolService_UpdateAll_0(rctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -281,7 +299,30 @@ func RegisterSymbolServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 			return
 		}
 
-		forward_SymbolService_StartUpdateJob_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_SymbolService_UpdateAll_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	mux.Handle("POST", pattern_SymbolService_UpdateAllJob_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/v1.symbol_service.SymbolService/UpdateAllJob")
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_SymbolService_UpdateAllJob_0(rctx, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_SymbolService_UpdateAllJob_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -386,23 +427,43 @@ func RegisterSymbolServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 
 	})
 
-	mux.Handle("POST", pattern_SymbolService_StartUpdateJob_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_SymbolService_UpdateAll_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/v1.symbol_service.SymbolService/StartUpdateJob")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/v1.symbol_service.SymbolService/UpdateAll")
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_SymbolService_StartUpdateJob_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_SymbolService_UpdateAll_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_SymbolService_StartUpdateJob_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_SymbolService_UpdateAll_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	mux.Handle("POST", pattern_SymbolService_UpdateAllJob_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/v1.symbol_service.SymbolService/UpdateAllJob")
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_SymbolService_UpdateAllJob_0(rctx, inboundMarshaler, client, req, pathParams)
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_SymbolService_UpdateAllJob_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -416,7 +477,9 @@ var (
 
 	pattern_SymbolService_Get_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"api", "v1", "symbols", "uuid"}, ""))
 
-	pattern_SymbolService_StartUpdateJob_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "symbols", "update"}, ""))
+	pattern_SymbolService_UpdateAll_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "symbols", "updateAll"}, ""))
+
+	pattern_SymbolService_UpdateAllJob_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "symbols", "updateAllJob"}, ""))
 )
 
 var (
@@ -426,5 +489,7 @@ var (
 
 	forward_SymbolService_Get_0 = runtime.ForwardResponseMessage
 
-	forward_SymbolService_StartUpdateJob_0 = runtime.ForwardResponseMessage
+	forward_SymbolService_UpdateAll_0 = runtime.ForwardResponseMessage
+
+	forward_SymbolService_UpdateAllJob_0 = runtime.ForwardResponseMessage
 )
