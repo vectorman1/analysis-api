@@ -98,7 +98,7 @@ message StartUpdateJobRequest {
 message StartUpdateJobResponse {
 }
 
-message RecalculateSymbolResponse {
+message UpdateAllResponse {
   int64 itemsCreated = 1;
   int64 itemsUpdated = 2;
   int64 itemsDeleted = 3;
@@ -188,9 +188,15 @@ service SymbolService {
       get: "/api/v1/symbols/{uuid}"
     };
   }
-  rpc StartUpdateJob (StartUpdateJobRequest) returns (StartUpdateJobResponse) {
+  rpc UpdateAll (StartUpdateJobRequest) returns (UpdateAllResponse) {
     option (google.api.http) = {
-      post: "/api/v1/symbols/update",
+      post: "/api/v1/symbols/updateAll",
+    };
+  }
+
+  rpc UpdateAllJob (StartUpdateJobRequest) returns (StartUpdateJobResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/symbols/updateAllJob",
     };
   }
 }

@@ -57,8 +57,17 @@ func (s *SymbolsServiceServer) Overview(ctx context.Context, req *symbol_service
 	return res, nil
 }
 
-func (s *SymbolsServiceServer) StartUpdateJob(ctx context.Context, req *symbol_service.StartUpdateJobRequest) (*symbol_service.StartUpdateJobResponse, error) {
+func (s *SymbolsServiceServer) UpdateAllJob(ctx context.Context, req *symbol_service.StartUpdateJobRequest) (*symbol_service.StartUpdateJobResponse, error) {
 	jobrunner.Now(jobs.NewSymbolUpdateJob(s.symbolService))
 
 	return &symbol_service.StartUpdateJobResponse{}, nil
+}
+
+func (s *SymbolsServiceServer) UpdateAll(ctx context.Context, req *symbol_service.StartUpdateJobRequest) (*symbol_service.UpdateAllResponse, error) {
+	res, err := s.symbolService.UpdateAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }

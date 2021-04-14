@@ -47,7 +47,7 @@ func (r *SymbolRepository) GetPaged(ctx context.Context, req *symbol_service.Get
 		OrderBy(order).
 		Offset((req.Filter.PageNumber - 1) * req.Filter.PageSize).
 		Limit(req.Filter.PageSize).
-		Where("deleted_at is NULL").
+		Where("deletedAt is NULL").
 		PlaceholderFormat(squirrel.Dollar)
 
 	if req.Filter.Text != "" {
@@ -158,7 +158,7 @@ func (r *SymbolRepository) InsertBulk(tx *pgx.Tx, ctx context.Context, symbols [
 	for list := range workList {
 		q := squirrel.
 			Insert("analysis.symbols").
-			Columns("uuid, currency_code, isin, identifier, name, minimum_order_quantity, market_name, market_hours_gmt, created_at, updated_at, deleted_at").
+			Columns("uuid, currencyCode, isin, identifier, name, minimumOrderQuantity, marketName, marketHoursGmt, createdAt, updatedAt, deletedAt").
 			PlaceholderFormat(squirrel.Dollar)
 		for _, sym := range list {
 			q = q.Values(
@@ -217,7 +217,7 @@ func (r *SymbolRepository) DeleteBulk(tx *pgx.Tx, ctx context.Context, symbols [
 			q := squirrel.Update("analysis.symbols")
 
 			q = q.
-				Set("deleted_at", now).
+				Set("deletedAt", now).
 				PlaceholderFormat(squirrel.Dollar).
 				Where(squirrel.Eq{"uuid::text": u})
 
@@ -267,8 +267,8 @@ func (r *SymbolRepository) UpdateBulk(tx *pgx.Tx, ctx context.Context, symbols [
 
 			q = q.
 				Set("name", sym.Name).
-				Set("market_hours_gmt", sym.MarketHoursGmt).
-				Set("updated_at", now).
+				Set("marketHoursGmt", sym.MarketHoursGmt).
+				Set("updatedAt", now).
 				Where(squirrel.Eq{"uuid::text": u})
 
 			query, args, _ := q.ToSql()

@@ -3,7 +3,8 @@ package documents
 import (
 	"time"
 
-	"github.com/golang/protobuf/ptypes"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	"github.com/vectorman1/analysis/analysis-api/generated/symbol_service"
 )
 
@@ -69,11 +70,11 @@ func (s *SymbolOverview) ShouldUpdate() bool {
 }
 
 func (s *SymbolOverview) ToProto() *symbol_service.SymbolOverview {
-	latestQuarter, _ := ptypes.TimestampProto(s.LatestQuarter)
-	updatedAt, _ := ptypes.TimestampProto(s.UpdatedAt)
-	dividendDate, _ := ptypes.TimestampProto(s.DividendDate)
-	exDividendDate, _ := ptypes.TimestampProto(s.ExDividendDate)
-	lastSplitDate, _ := ptypes.TimestampProto(s.DividendDate)
+	latestQuarter := timestamppb.New(s.LatestQuarter)
+	updatedAt := timestamppb.New(s.UpdatedAt)
+	dividendDate := timestamppb.New(s.DividendDate)
+	exDividendDate := timestamppb.New(s.ExDividendDate)
+	lastSplitDate := timestamppb.New(s.DividendDate)
 
 	return &symbol_service.SymbolOverview{
 		Description:                s.Description,

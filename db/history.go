@@ -17,7 +17,7 @@ import (
 
 type HistoryRepositoryContract interface {
 	InsertMany(ctx context.Context, list *[]documents.History) (int, error)
-	GetSymbolHistory(ctx context.Context, symbolUuid string, startDate time.Time, endDate time.Time, desc bool) (*[]documents.History, error)
+	GetSymbolHistory(ctx context.Context, symbolUuid string, startDate time.Time, endDate time.Time, desc bool) ([]documents.History, error)
 	GetLastSymbolHistory(ctx context.Context, symbolUuid string) (*documents.LastHistory, error)
 }
 
@@ -46,7 +46,7 @@ func (r *HistoryRepository) InsertMany(ctx context.Context, list *[]documents.Hi
 	return len(res.InsertedIDs), nil
 }
 
-func (r *HistoryRepository) GetSymbolHistory(ctx context.Context, symbolUuid string, startDate time.Time, endDate time.Time, desc bool) (*[]documents.History, error) {
+func (r *HistoryRepository) GetSymbolHistory(ctx context.Context, symbolUuid string, startDate time.Time, endDate time.Time, desc bool) ([]documents.History, error) {
 	opts := options.Find()
 	if desc {
 		opts.SetSort(bson.D{{"timestamp", -1}})
@@ -86,7 +86,7 @@ func (r *HistoryRepository) GetSymbolHistory(ctx context.Context, symbolUuid str
 		result = append(result, history)
 	}
 
-	return &result, nil
+	return result, nil
 }
 
 func (r *HistoryRepository) GetLastSymbolHistory(ctx context.Context, symbolUuid string) (*documents.LastHistory, error) {
@@ -98,7 +98,10 @@ func (r *HistoryRepository) GetLastSymbolHistory(ctx context.Context, symbolUuid
 		},
 		bson.M{
 			"$group": bson.M{
-				"_id": "$symboluuid",
+				"_id": "$_id",
+				"close": bson.M{
+					"$last": "$close",
+				},
 				"timestamp": bson.M{
 					"$last": "$timestamp",
 				},

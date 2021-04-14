@@ -4,6 +4,10 @@ import (
 	"context"
 	"time"
 
+	validationErrors "github.com/vectorman1/analysis/analysis-api/common/errors"
+
+	"github.com/vectorman1/analysis/analysis-api/model/db/documents"
+
 	"google.golang.org/grpc/grpclog"
 
 	"github.com/vectorman1/analysis/analysis-api/common"
@@ -32,10 +36,10 @@ type SymbolServiceContract interface {
 	Overview(ctx context.Context, req *symbol_service.SymbolOverviewRequest) (*symbol_service.SymbolOverview, error)
 
 	// service methods
-	UpdateAll(ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error)
+	UpdateAll(ctx context.Context) (*symbol_service.UpdateAllResponse, error)
 	processRecalculationResponse(
 		input []*worker_symbol_service.RecalculateSymbolsResponse,
-		ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error)
+		ctx context.Context) (*symbol_service.UpdateAllResponse, error)
 	symbolDataToEntity(in *[]*proto_models.Symbol) ([]*entities.Symbol, error)
 	filterUnusableSymbols(symbols *[]*proto_models.Symbol) *[]*proto_models.Symbol
 }
@@ -98,32 +102,36 @@ func (s *SymbolService) Overview(ctx context.Context, req *symbol_service.Symbol
 
 	symbol, err := s.symbolRepository.GetByUuid(ctx, req.Uuid)
 	if err != nil {
-		return nil, status.Error(codes.NotFound, "invalid symbol uuid")
+		return nil, status.Error(codes.NotFound, validationErrors.NoSymbolFound)
 	}
+	psym := symbol.ToProto()
 
 	overview, err := s.symbolOverviewRepository.GetBySymbolUuid(ctx, req.Uuid)
-	if err != nil || overview.ShouldUpdate() {
-		extOverview, err := s.alphaVantageService.GetSymbolOverview(symbol.Identifier)
+	if err != nil {
+		newOverview, err := s.getAndInsertSymbolOverview(ctx, psym)
+		if err != nil {
+			return nil, status.Error(codes.NotFound, validationErrors.NoOverviewFoundForSymbol)
+		}
+
+		overview = newOverview
+	} else if overview.ShouldUpdate() {
+		err := s.symbolOverviewRepository.Delete(ctx, psym.Uuid)
 		if err != nil {
 			return nil, err
 		}
 
-		_, err = s.symbolOverviewRepository.Insert(ctx, extOverview.ToEntity(req.Uuid))
+		newOverview, err := s.getAndInsertSymbolOverview(ctx, psym)
 		if err != nil {
-			return nil, err
+			return nil, status.Error(codes.NotFound, validationErrors.NoOverviewFoundForSymbol)
 		}
 
-		newOverview, err := s.symbolOverviewRepository.GetBySymbolUuid(ctx, req.Uuid)
-		if err != nil {
-			return nil, err
-		}
 		overview = newOverview
 	}
 
 	return overview.ToProto(), nil
 }
 
-func (s *SymbolService) UpdateAll(ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error) {
+func (s *SymbolService) UpdateAll(ctx context.Context) (*symbol_service.UpdateAllResponse, error) {
 	oldSymbols, _, err := s.GetPaged(ctx, &symbol_service.GetPagedRequest{
 		Filter: &proto_models.PagedFilter{
 			PageSize:   100000,
@@ -153,7 +161,7 @@ func (s *SymbolService) UpdateAll(ctx context.Context) (*symbol_service.Recalcul
 
 func (s *SymbolService) processRecalculationResponse(
 	input []*worker_symbol_service.RecalculateSymbolsResponse,
-	ctx context.Context) (*symbol_service.RecalculateSymbolResponse, error) {
+	ctx context.Context) (*symbol_service.UpdateAllResponse, error) {
 
 	var createSymbols []*proto_models.Symbol
 	var updateSymbols []*proto_models.Symbol
@@ -223,7 +231,7 @@ func (s *SymbolService) processRecalculationResponse(
 		return nil, err
 	}
 
-	return &symbol_service.RecalculateSymbolResponse{
+	return &symbol_service.UpdateAllResponse{
 		ItemsCreated: int64(len(createSymbols)),
 		ItemsUpdated: int64(len(updateSymbols)),
 		ItemsDeleted: int64(len(deleteSymbols)),
@@ -329,4 +337,23 @@ func (s *SymbolService) filterUnusableSymbols(symbols *[]*proto_models.Symbol) *
 	}
 
 	return &res
+}
+
+func (s *SymbolService) getAndInsertSymbolOverview(ctx context.Context, sym *proto_models.Symbol) (*documents.SymbolOverview, error) {
+	extOverview, err := s.alphaVantageService.GetSymbolOverview(sym.Identifier)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = s.symbolOverviewRepository.Insert(ctx, extOverview.ToEntity(sym.Uuid))
+	if err != nil {
+		return nil, err
+	}
+
+	newOverview, err := s.symbolOverviewRepository.GetBySymbolUuid(ctx, sym.Uuid)
+	if err != nil {
+		return nil, err
+	}
+
+	return newOverview, nil
 }
