@@ -80,3 +80,7 @@ func (h *History) ToProto() *history_service.History {
 		CreatedAt: createdAt,
 	}
 }
+
+func (h *History) ShouldUpdate() bool {
+	return time.Since(h.Timestamp) > 3*(24*time.Hour)
+}

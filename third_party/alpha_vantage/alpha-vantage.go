@@ -7,6 +7,10 @@ import (
 	"net/http"
 	"time"
 
+	validationErrors "github.com/vectorman1/analysis/analysis-api/common/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/vectorman1/analysis/analysis-api/model/service"
 
 	"github.com/vectorman1/analysis/analysis-api/common"
@@ -53,6 +57,9 @@ func (s *AlphaVantageService) GetSymbolOverview(symbolName string) (*service.Sym
 	err = json.Unmarshal(body, &result)
 	if err != nil {
 		return nil, err
+	}
+	if result.Description == "" {
+		return nil, status.Error(codes.NotFound, validationErrors.NoOverviewFoundForSymbol)
 	}
 
 	return result, nil

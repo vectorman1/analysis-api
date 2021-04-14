@@ -22,7 +22,7 @@ import (
 	"github.com/vectorman1/analysis/analysis-api/db"
 )
 
-type historyService interface {
+type HistoryServiceContract interface {
 	GetSymbolHistory(ctx context.Context, req *history_service.GetBySymbolUuidRequest) (*history_service.GetBySymbolUuidResponse, error)
 	UpdateSymbolHistory(ctx context.Context, symUuid string, identifier string) (int, error)
 	GetChartBySymbolUuid(ctx context.Context, req *history_service.GetChartBySymbolUuidRequest) (*history_service.GetChartBySymbolUuidResponse, error)
@@ -65,7 +65,7 @@ func (s *HistoryService) GetSymbolHistory(ctx context.Context, req *history_serv
 	}
 
 	var response []*history_service.History
-	for _, history := range *result {
+	for _, history := range result {
 		response = append(response, history.ToProto())
 	}
 	return &history_service.GetBySymbolUuidResponse{Items: response}, nil
@@ -86,9 +86,12 @@ func (s *HistoryService) UpdateSymbolHistory(ctx context.Context, symUuid string
 		if err != nil {
 			return 0, err
 		}
+		if len(*histories) == 0 {
+			return 0, status.Error(codes.NotFound, validationErrors.NoHistoryFoundForSymbol)
+		}
 
 		// set Technical Analysis values based on histories
-		*histories = s.reportService.GetTAValues(*histories, len(*histories))
+		*histories, _ = s.reportService.GetTAValues(*histories, len(*histories))
 		res, err := s.historyRepository.InsertMany(ctx, histories)
 		if err != nil {
 			return 0, err
@@ -117,15 +120,23 @@ func (s *HistoryService) UpdateSymbolHistory(ctx context.Context, symUuid string
 			// get last 150 history entries to pass to calculation method
 			// it does further checks for each type of indicator
 			// - e.g. min. 120 for MA120
-			previous, err := s.historyRepository.GetSymbolHistory(ctx, symUuid, lastHistory.Timestamp.Add(-(150 * (24 * time.Hour))), time.Now(), false)
+			previous, err := s.historyRepository.GetSymbolHistory(
+				ctx,
+				symUuid,
+				lastHistory.Timestamp.Add(-(150 * (24 * time.Hour))),
+				time.Now(),
+				false)
 			if err != nil {
 				return 0, err
 			}
 
 			// pass the new and old history for the calculation
 			// the method returns only the difference
-			*previous = append(*previous, *candles...)
-			*candles = s.reportService.GetTAValues(*previous, len(*candles))
+			previous = append(previous, *candles...)
+			*candles, err = s.reportService.GetTAValues(previous, len(*candles))
+			if err != nil {
+				return 0, err
+			}
 
 			res, err := s.historyRepository.InsertMany(ctx, candles)
 			if err != nil {
@@ -139,25 +150,51 @@ func (s *HistoryService) UpdateSymbolHistory(ctx context.Context, symUuid string
 	return 0, nil
 }
 
-func (s *HistoryService) GetChartBySymbolUuid(ctx context.Context, req *history_service.GetChartBySymbolUuidRequest) (*history_service.GetChartBySymbolUuidResponse, error) {
+func (s *HistoryService) GetChartBySymbolUuid(
+	ctx context.Context,
+	req *history_service.GetChartBySymbolUuidRequest) (*history_service.GetChartBySymbolUuidResponse, error) {
 	if !req.StartDate.IsValid() || !req.EndDate.IsValid() {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid date")
 	}
 
-	histories, err := s.historyRepository.GetSymbolHistory(ctx, req.SymbolUuid, req.StartDate.AsTime(), req.EndDate.AsTime(), false)
+	histories, err := s.historyRepository.GetSymbolHistory(
+		ctx,
+		req.SymbolUuid,
+		req.StartDate.AsTime(),
+		req.EndDate.AsTime(), false)
 	if err != nil {
 		return nil, err
 	}
-	if len(*histories) == 0 {
-		return nil, status.Error(codes.NotFound, validationErrors.NoHistoryFoundForSymbol)
+
+	if len(histories) == 0 || histories[len(histories)-1:][0].ShouldUpdate() {
+		sym, err := s.symbolRepository.GetByUuid(ctx, req.SymbolUuid)
+		if err != nil {
+			return nil, status.Error(codes.NotFound, validationErrors.NoSymbolFound)
+		}
+
+		entries, err := s.UpdateSymbolHistory(ctx, req.SymbolUuid, sym.Identifier)
+		if err != nil {
+			return nil, err
+		} else if entries == 0 {
+			return nil, status.Error(codes.NotFound, validationErrors.NoHistoryFoundForSymbol)
+		}
+
+		if entries > 0 {
+			histories, err = s.historyRepository.GetSymbolHistory(ctx, req.SymbolUuid, req.StartDate.AsTime(), req.EndDate.AsTime(), false)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, status.Error(codes.NotFound, validationErrors.NoHistoryFoundForSymbol)
+		}
 	}
 
 	var res history_service.GetChartBySymbolUuidResponse
-	for _, h := range *histories {
+	for _, h := range histories {
 		var values []float64
 		// close open low high
-		values = append(values, h.Close)
 		values = append(values, h.Open)
+		values = append(values, h.Close)
 		values = append(values, h.Low)
 		values = append(values, h.High)
 

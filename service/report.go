@@ -4,6 +4,9 @@ import (
 	"sync"
 	"time"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/sdcoffey/big"
 
 	"github.com/sdcoffey/techan"
@@ -23,10 +26,10 @@ func NewReportService() *ReportService {
 
 // GetTAValues calculates the respective TA values of the histories and returns
 // a sub-slice with len newLen, starting from the end.
-func (s *ReportService) GetTAValues(histories []documents.History, newLen int) []documents.History {
+func (s *ReportService) GetTAValues(histories []documents.History, newLen int) ([]documents.History, error) {
 	historiesLen := len(histories)
 	if historiesLen < 5 {
-		return nil
+		return nil, nil
 	}
 
 	series := techan.NewTimeSeries()
@@ -38,7 +41,9 @@ func (s *ReportService) GetTAValues(histories []documents.History, newLen int) [
 		candle.MaxPrice = big.NewDecimal(history.High)
 		candle.MinPrice = big.NewDecimal(history.Low)
 		candle.Volume = big.NewDecimal(float64(history.Volume))
-		series.AddCandle(candle)
+		if ok := series.AddCandle(candle); !ok {
+			return nil, status.Error(codes.FailedPrecondition, "History data error")
+		}
 	}
 
 	closePrices := techan.NewClosePriceIndicator(series)
@@ -128,5 +133,5 @@ func (s *ReportService) GetTAValues(histories []documents.History, newLen int) [
 
 	wg.Wait()
 
-	return histories[historiesLen-newLen:]
+	return histories[historiesLen-newLen:], nil
 }
