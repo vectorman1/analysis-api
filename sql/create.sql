@@ -45,3 +45,6 @@ CREATE TABLE IF NOT EXISTS "user".users
     updatedAt TIMESTAMPTZ NOT NULL DEFAULT now(),
     deletedAt TIMESTAMPTZ NULL DEFAULT NULL
     );
+
+-- Insert admin account
+INSERT INTO "user".users VALUES (1, uuid_generate_v4(), 1, 'admin', '$2a$10$DT3TWK7tRrfdGhxY0KS9hux3PutpaU.7z1UQmn6eitfroNzwaUDMe');
