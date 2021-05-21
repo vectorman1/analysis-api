@@ -1,4 +1,4 @@
-package service
+package http_rest
 
 type HttpResponse struct {
 	Code    int

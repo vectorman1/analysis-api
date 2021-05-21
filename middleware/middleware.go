@@ -3,9 +3,8 @@ package middleware
 import (
 	"context"
 
-	"github.com/vectorman1/analysis/analysis-api/model/service"
-
 	"github.com/dgrijalva/jwt-go"
+	"github.com/vectorman1/analysis/analysis-api/common"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
@@ -61,7 +60,7 @@ func authorizeToken(ctx context.Context) (context.Context, error) {
 		return ctx, nil
 	}
 
-	claims := &service.Claims{}
+	claims := &common.Claims{}
 	_, err = jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte("kurzaushev"), nil
 	})

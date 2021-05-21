@@ -8,20 +8,19 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/vectorman1/analysis/analysis-api/third_party/yahoo"
-
-	"github.com/vectorman1/analysis/analysis-api/third_party/alpha_vantage"
-	"github.com/vectorman1/analysis/analysis-api/third_party/trading_212"
+	instruments_present "github.com/vectorman1/analysis/analysis-api/domain/instrument/present"
+	instruments_repo "github.com/vectorman1/analysis/analysis-api/domain/instrument/repo"
+	instruments_service "github.com/vectorman1/analysis/analysis-api/domain/instrument/service"
+	instruments_third_party "github.com/vectorman1/analysis/analysis-api/domain/instrument/third_party"
+	user_present "github.com/vectorman1/analysis/analysis-api/domain/user/present"
+	user_repo "github.com/vectorman1/analysis/analysis-api/domain/user/repo"
+	user_service "github.com/vectorman1/analysis/analysis-api/domain/user/service"
 
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/jackc/pgx"
-
-	"github.com/vectorman1/analysis/analysis-api/service"
-
-	"github.com/vectorman1/analysis/analysis-api/service/server"
 
 	"github.com/vectorman1/analysis/analysis-api/common"
 	"github.com/vectorman1/analysis/analysis-api/db"
@@ -77,6 +76,11 @@ func RunServer() error {
 	}
 	defer client.Disconnect(tctx)
 
+	err = db.CreateMongoIndexes(client.Database(common.MongoDbDatabase))
+	if err != nil {
+		return fmt.Errorf("failed to create mongodb indexes: %v", err)
+	}
+
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
@@ -99,26 +103,25 @@ func RunServer() error {
 }
 
 func initializeServices(ctx context.Context, pgConnPool *pgx.ConnPool, mongoDatabase *mongo.Database, config *common.Config) (*grpc_server.GRPCServer, error) {
-	historyRepository := db.NewHistoryRepository(mongoDatabase)
-	symbolOverviewRepository := db.NewSymbolOverviewRepository(mongoDatabase)
+	historyRepository := instruments_repo.NewHistoryRepository(mongoDatabase)
+	symbolOverviewRepository := instruments_repo.NewSymbolOverviewRepository(mongoDatabase)
 
-	symbolRepository := db.NewSymbolRepository(pgConnPool)
-	userRepository := db.NewUserRepository(pgConnPool)
+	symbolRepository := instruments_repo.NewSymbolRepository(pgConnPool)
+	userRepository := user_repo.NewUserRepository(pgConnPool)
 
-	trading212Service := trading_212.NewTrading212Service()
-	alphaVantageService := alpha_vantage.NewAlphaVantageService(config)
-	yahooService := yahoo.NewYahooService()
+	trading212Service := instruments_third_party.NewTrading212Service()
+	alphaVantageService := instruments_third_party.NewAlphaVantageService(config)
+	yahooService := instruments_third_party.NewYahooService()
 
-	reportService := service.NewReportService()
-	symbolService := service.NewSymbolService(symbolRepository, symbolOverviewRepository, alphaVantageService, trading212Service)
-	userService := service.NewUserService(userRepository, config)
-	historyService := service.NewHistoryService(yahooService, historyRepository, symbolRepository, symbolOverviewRepository, reportService)
+	reportService := instruments_service.NewReportService()
+	symbolService := instruments_service.NewSymbolService(symbolRepository, symbolOverviewRepository, alphaVantageService, trading212Service)
+	userService := user_service.NewUserService(userRepository, config)
+	historyService := instruments_service.NewHistoryService(yahooService, historyRepository, symbolRepository, symbolOverviewRepository, reportService)
 
-	symbolServiceServer := server.NewSymbolServiceServer(symbolService)
-	userServiceServer := server.NewUserServiceServer(userService)
-	historyServiceServer := server.NewHistoryServiceServer(historyService)
+	symbolServiceServer := instruments_present.NewSymbolServiceServer(symbolService, historyService)
+	userServiceServer := user_present.NewUserServiceServer(userService)
 
-	return grpc_server.NewGRPCServer(ctx, config.GRPCPort, symbolServiceServer, userServiceServer, historyServiceServer), nil
+	return grpc_server.NewGRPCServer(ctx, config.GRPCPort, symbolServiceServer, userServiceServer), nil
 }
 
 func main() {
