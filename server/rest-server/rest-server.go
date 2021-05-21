@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/vectorman1/analysis/analysis-api/generated/history_service"
+	"github.com/vectorman1/analysis/analysis-api/generated/instrument_service"
 
 	"github.com/vectorman1/analysis/analysis-api/common"
 
@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/vectorman1/analysis/analysis-api/generated/symbol_service"
 	logger_grpc "github.com/vectorman1/analysis/analysis-api/middleware/logger-grpc"
 	tracer_rest "github.com/vectorman1/analysis/analysis-api/middleware/tracer-rest"
 	"go.uber.org/zap"
@@ -34,13 +33,10 @@ func RunServer(ctx context.Context, config *common.Config) error {
 	gwmux := runtime.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithInsecure()}
 
-	if err := symbol_service.RegisterSymbolServiceHandlerFromEndpoint(ctx, gwmux, "0.0.0.0:"+config.GRPCPort, opts); err != nil {
+	if err := instrument_service.RegisterInstrumentServiceHandlerFromEndpoint(ctx, gwmux, "0.0.0.0:"+config.GRPCPort, opts); err != nil {
 		logger_grpc.Log.Fatal("failed to start HTTP gateway", zap.String("reason", err.Error()))
 	}
 	if err := user_service.RegisterUserServiceHandlerFromEndpoint(ctx, gwmux, "0.0.0.0:"+config.GRPCPort, opts); err != nil {
-		logger_grpc.Log.Fatal("failed to start HTTP gateway", zap.String("reason", err.Error()))
-	}
-	if err := history_service.RegisterHistoryServiceHandlerFromEndpoint(ctx, gwmux, "0.0.0.0:"+config.GRPCPort, opts); err != nil {
 		logger_grpc.Log.Fatal("failed to start HTTP gateway", zap.String("reason", err.Error()))
 	}
 
