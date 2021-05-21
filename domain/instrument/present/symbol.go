@@ -81,3 +81,25 @@ func (s *InstrumentServiceServer) UpdateAll(
 
 	return res, nil
 }
+
+func (s *InstrumentServiceServer) History(
+	ctx context.Context,
+	req *instrument_service.HistoryRequest) (*instrument_service.HistoryResponse, error) {
+	res, err := s.historyService.GetSymbolHistory(ctx, req)
+	if err != nil {
+		return nil, common.GetErrorStatus(err)
+	}
+
+	return res, nil
+}
+
+func (s *InstrumentServiceServer) Chart(
+	ctx context.Context,
+	req *instrument_service.ChartRequest) (*instrument_service.ChartResponse, error) {
+	res, err := s.historyService.GetChartBySymbolUuid(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
