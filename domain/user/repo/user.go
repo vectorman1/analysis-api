@@ -4,17 +4,18 @@ import (
 	"context"
 	"time"
 
+	"github.com/vectorman1/analysis/analysis-api/generated/user_service"
+
 	"github.com/vectorman1/analysis/analysis-api/domain/user/model"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx"
 	"github.com/vectorman1/analysis/analysis-api/common"
-	"github.com/vectorman1/analysis/analysis-api/generated/proto_models"
 )
 
 type UserRepositoryContract interface {
 	GetByUsername(context.Context, string) (*model.User, error)
-	GetPaged(context.Context, *proto_models.PagedFilter) (*[]model.User, uint, error)
+	GetPaged(context.Context, *user_service.PagedFilter) (*[]model.User, uint, error)
 	Create(context.Context, *model.User) error
 	Update(context.Context, *model.User) error
 	Delete(context.Context, string) error
@@ -50,7 +51,7 @@ func (r *UserRepository) GetByUsername(ctx context.Context, username string) (*m
 	return &res, nil
 }
 
-func (r *UserRepository) GetPaged(ctx context.Context, filter *proto_models.PagedFilter) (*[]model.User, uint, error) {
+func (r *UserRepository) GetPaged(ctx context.Context, filter *user_service.PagedFilter) (*[]model.User, uint, error) {
 	// generate query
 	order := common.FormatOrderQuery(filter.Order, filter.Ascending)
 	query, args, err := squirrel.

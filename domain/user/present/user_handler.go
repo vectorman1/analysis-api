@@ -1,9 +1,9 @@
-package present
+package user_service
 
 import (
 	"context"
 
-	service2 "github.com/vectorman1/analysis/analysis-api/domain/user/service"
+	"github.com/vectorman1/analysis/analysis-api/domain/user/service"
 
 	"github.com/vectorman1/analysis/analysis-api/common"
 
@@ -11,11 +11,11 @@ import (
 )
 
 type UserServiceServer struct {
-	userService *service2.UserService
+	userService *service.UserService
 	user_service.UnimplementedUserServiceServer
 }
 
-func NewUserServiceServer(userService *service2.UserService) *UserServiceServer {
+func NewUserServiceServer(userService *service.UserService) *UserServiceServer {
 	return &UserServiceServer{userService: userService}
 }
 

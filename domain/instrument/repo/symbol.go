@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/vectorman1/analysis/analysis-api/generated/instrument_service"
+
 	"github.com/vectorman1/analysis/analysis-api/domain/instrument/model"
 
 	"github.com/jackc/pgx/pgtype"
@@ -14,11 +16,10 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx"
 	"github.com/vectorman1/analysis/analysis-api/common"
-	"github.com/vectorman1/analysis/analysis-api/generated/symbol_service"
 )
 
 type SymbolRepo interface {
-	GetPaged(ctx context.Context, req *symbol_service.GetPagedRequest) (*[]model.Symbol, uint, error)
+	GetPaged(ctx context.Context, req *instrument_service.PagedRequest) (*[]model.Symbol, uint, error)
 	GetByUuid(ctx context.Context, uuid string) (*model.Symbol, error)
 	InsertBulk(tx *pgx.Tx, ctx context.Context, symbols []*model.Symbol) (bool, error)
 	DeleteBulk(tx *pgx.Tx, ctx context.Context, symbols []*model.Symbol) (bool, error)
@@ -38,7 +39,7 @@ func NewSymbolRepository(db *pgx.ConnPool) *SymbolRepository {
 }
 
 // GetPaged returns a paged response of symbols stored
-func (r *SymbolRepository) GetPaged(ctx context.Context, req *symbol_service.GetPagedRequest) (*[]model.Symbol, uint, error) {
+func (r *SymbolRepository) GetPaged(ctx context.Context, req *instrument_service.PagedRequest) (*[]model.Symbol, uint, error) {
 	// generate query
 	order := common.FormatOrderQuery(req.Filter.Order, req.Filter.Ascending)
 	queryBuilder := squirrel.

@@ -13,13 +13,7 @@ import (
 
 	validationErrors "github.com/vectorman1/analysis/analysis-api/common/errors"
 
-	"github.com/vectorman1/analysis/analysis-api/generated/proto_models"
-
 	"google.golang.org/grpc/grpclog"
-
-	"github.com/vectorman1/analysis/analysis-api/generated/symbol_service"
-
-	"github.com/vectorman1/analysis/analysis-api/generated/history_service"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -162,7 +156,7 @@ func (s *HistoryService) GetChartBySymbolUuid(
 
 	histories, err := s.historyRepository.GetSymbolHistory(
 		ctx,
-		req.SymbolUuid,
+		req.Uuid,
 		req.StartDate.AsTime(),
 		req.EndDate.AsTime(), false)
 	if err != nil {
@@ -170,12 +164,12 @@ func (s *HistoryService) GetChartBySymbolUuid(
 	}
 
 	if len(histories) == 0 || histories[len(histories)-1:][0].ShouldUpdate() {
-		sym, err := s.symbolRepository.GetByUuid(ctx, req.SymbolUuid)
+		sym, err := s.symbolRepository.GetByUuid(ctx, req.Uuid)
 		if err != nil {
 			return nil, status.Error(codes.NotFound, validationErrors.NoSymbolFound)
 		}
 
-		entries, err := s.UpdateSymbolHistory(ctx, req.SymbolUuid, sym.Identifier)
+		entries, err := s.UpdateSymbolHistory(ctx, req.Uuid, sym.Identifier)
 		if err != nil {
 			return nil, err
 		} else if entries == 0 {
@@ -183,7 +177,7 @@ func (s *HistoryService) GetChartBySymbolUuid(
 		}
 
 		if entries > 0 {
-			histories, err = s.historyRepository.GetSymbolHistory(ctx, req.SymbolUuid, req.StartDate.AsTime(), req.EndDate.AsTime(), false)
+			histories, err = s.historyRepository.GetSymbolHistory(ctx, req.Uuid, req.StartDate.AsTime(), req.EndDate.AsTime(), false)
 			if err != nil {
 				return nil, err
 			}
@@ -192,7 +186,7 @@ func (s *HistoryService) GetChartBySymbolUuid(
 		}
 	}
 
-	var res history_service.GetChartBySymbolUuidResponse
+	var res instrument_service.ChartResponse
 	for _, h := range histories {
 		var values []float64
 		// close open low high
@@ -202,7 +196,7 @@ func (s *HistoryService) GetChartBySymbolUuid(
 		values = append(values, h.High)
 
 		res.Dates = append(res.Dates, h.Timestamp.Format("2006-01-02"))
-		res.ChartDays = append(res.ChartDays, &history_service.ChartDay{Values: values})
+		res.ChartDays = append(res.ChartDays, &instrument_service.ChartDay{Values: values})
 	}
 
 	return &res, nil
@@ -211,8 +205,8 @@ func (s *HistoryService) GetChartBySymbolUuid(
 func (s *HistoryService) UpdateAll(ctx context.Context) error {
 	res, _, err := s.symbolRepository.GetPaged(
 		context.Background(),
-		&symbol_service.GetPagedRequest{
-			Filter: &proto_models.PagedFilter{
+		&instrument_service.PagedRequest{
+			Filter: &instrument_service.PagedFilter{
 				PageSize:   100000,
 				PageNumber: 1,
 				Order:      "identifier",

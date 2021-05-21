@@ -2,7 +2,7 @@ package model
 
 import (
 	"github.com/jackc/pgtype"
-	"github.com/vectorman1/analysis/analysis-api/generated/proto_models"
+	"github.com/vectorman1/analysis/analysis-api/generated/instrument_service"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -23,7 +23,7 @@ type Symbol struct {
 	DeletedAt pgtype.Timestamptz `json:"deleted_at"`
 }
 
-func (Symbol) FromProtoObject(sym *proto_models.Symbol) *Symbol {
+func (Symbol) FromProtoObject(sym *instrument_service.Instrument) *Symbol {
 	moq := pgtype.Float4{}
 	moq.Set(sym.MinimumOrderQuantity)
 
@@ -44,12 +44,12 @@ func (Symbol) FromProtoObject(sym *proto_models.Symbol) *Symbol {
 	return res
 }
 
-func (s *Symbol) ToProto() *proto_models.Symbol {
+func (s *Symbol) ToProto() *instrument_service.Instrument {
 	// db constraint
 	var u string
 	s.Uuid.AssignTo(&u)
 
-	res := &proto_models.Symbol{
+	res := &instrument_service.Instrument{
 		CurrencyCode:         s.CurrencyCode,
 		Isin:                 s.Isin,
 		Uuid:                 u,

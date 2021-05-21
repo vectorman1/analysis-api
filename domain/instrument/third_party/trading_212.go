@@ -9,17 +9,18 @@ import (
 	"sync"
 	"time"
 
+	"github.com/vectorman1/analysis/analysis-api/generated/instrument_service"
+
 	"github.com/chromedp/chromedp"
 	"github.com/dystopia-systems/alaskalog"
 	"github.com/gofrs/uuid"
 	"github.com/vectorman1/analysis/analysis-api/common"
-	"github.com/vectorman1/analysis/analysis-api/generated/proto_models"
 	"golang.org/x/net/html"
 	"golang.org/x/sync/errgroup"
 )
 
 type externalSymbolService interface {
-	GetLatest(*context.Context) (*[]*proto_models.Symbol, error)
+	GetLatest(*context.Context) (*[]*instrument_service.Instrument, error)
 }
 
 type ExternalSymbolService struct {
@@ -29,7 +30,7 @@ func NewTrading212Service() *ExternalSymbolService {
 	return &ExternalSymbolService{}
 }
 
-func (s *ExternalSymbolService) GetLatest(ctx context.Context) (*[]*proto_models.Symbol, error) {
+func (s *ExternalSymbolService) GetLatest(ctx context.Context) (*[]*instrument_service.Instrument, error) {
 	bctx, c1 := chromedp.NewContext(
 		ctx,
 		chromedp.WithLogf(alaskalog.Logger.Infof),
@@ -53,8 +54,8 @@ func (s *ExternalSymbolService) GetLatest(ctx context.Context) (*[]*proto_models
 	return parseHtmlToProtoSyms(htmlRes)
 }
 
-func parseHtmlToProtoSyms(htmlRes string) (*[]*proto_models.Symbol, error) {
-	var parsedProtoSyms []*proto_models.Symbol
+func parseHtmlToProtoSyms(htmlRes string) (*[]*instrument_service.Instrument, error) {
+	var parsedProtoSyms []*instrument_service.Instrument
 	var wg sync.WaitGroup
 
 	rows, err := walkTable(htmlRes)
@@ -63,7 +64,7 @@ func parseHtmlToProtoSyms(htmlRes string) (*[]*proto_models.Symbol, error) {
 	}
 
 	// get results from parser worker
-	parsedSymsChan := make(chan *proto_models.Symbol)
+	parsedSymsChan := make(chan *instrument_service.Instrument)
 	go func(wg *sync.WaitGroup) {
 		for sym := range parsedSymsChan {
 			parsedProtoSyms = append(parsedProtoSyms, sym)
@@ -103,7 +104,7 @@ func parseHtmlToProtoSyms(htmlRes string) (*[]*proto_models.Symbol, error) {
 }
 
 // getSymbolData reads a row from the table and parses it into a proto struct
-func getSymbolData(row []string) (*proto_models.Symbol, error) {
+func getSymbolData(row []string) (*instrument_service.Instrument, error) {
 	instrumentName := strings.TrimSpace(row[0])
 	companyName := strings.TrimSpace(row[1])
 	currencyCode := strings.TrimSpace(row[2])
@@ -122,7 +123,7 @@ func getSymbolData(row []string) (*proto_models.Symbol, error) {
 	u := uuid.NewV5(ns, str)
 	us := u.String()
 
-	return &proto_models.Symbol{
+	return &instrument_service.Instrument{
 		Uuid:                 us,
 		Isin:                 isin,
 		Identifier:           instrumentName,

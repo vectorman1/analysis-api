@@ -158,6 +158,8 @@ message HistoryResponse {
 }
 message ChartRequest {
   string uuid = 1;
+  google.protobuf.Timestamp startDate = 2;
+  google.protobuf.Timestamp endDate = 3;
 }
 message ChartResponse {
   repeated string dates = 1;
@@ -177,7 +179,16 @@ message History {
   google.protobuf.Timestamp timestamp = 6;
   double adjClose = 8;
 }
-
+message InstrumentStatus {
+  enum responseType {
+    CREATE = 0;
+    UPDATE = 1;
+    DELETE = 2;
+    IGNORE = 3;
+  }
+  responseType type = 1;
+  Instrument symbol = 2;
+}
 option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
   info: {
     title: "Instrument Service";

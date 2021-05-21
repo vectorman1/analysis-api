@@ -3,9 +3,9 @@ package model
 import (
 	"time"
 
-	"google.golang.org/protobuf/types/known/timestamppb"
+	"github.com/vectorman1/analysis/analysis-api/generated/instrument_service"
 
-	"github.com/vectorman1/analysis/analysis-api/generated/symbol_service"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type InstrumentOverview struct {
@@ -69,14 +69,14 @@ func (s *InstrumentOverview) ShouldUpdate() bool {
 	return time.Since(s.UpdatedAt) > 7*(24*time.Hour)
 }
 
-func (s *InstrumentOverview) ToProto() *symbol_service.SymbolOverview {
+func (s *InstrumentOverview) ToProto() *instrument_service.InstrumentOverview {
 	latestQuarter := timestamppb.New(s.LatestQuarter)
 	updatedAt := timestamppb.New(s.UpdatedAt)
 	dividendDate := timestamppb.New(s.DividendDate)
 	exDividendDate := timestamppb.New(s.ExDividendDate)
 	lastSplitDate := timestamppb.New(s.DividendDate)
 
-	return &symbol_service.SymbolOverview{
+	return &instrument_service.InstrumentOverview{
 		Description:                s.Description,
 		Country:                    s.Country,
 		Sector:                     s.Sector,

@@ -14,40 +14,50 @@ import (
 
 	"github.com/vectorman1/analysis/analysis-api/common"
 
-	"github.com/vectorman1/analysis/analysis-api/generated/worker_symbol_service"
-
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"github.com/jackc/pgx"
 
-	"github.com/vectorman1/analysis/analysis-api/generated/proto_models"
-	"github.com/vectorman1/analysis/analysis-api/generated/symbol_service"
+	"github.com/vectorman1/analysis/analysis-api/generated/instrument_service"
 )
 
-type SymbolServiceContract interface {
+type InstrumentsServiceContract interface {
 	// repo methods
-	Get(ctx context.Context, uuid string) (*proto_models.Symbol, error)
-	GetPaged(ctx context.Context, req *symbol_service.GetPagedRequest) (*[]*proto_models.Symbol, uint, error)
-	Overview(ctx context.Context, req *symbol_service.SymbolOverviewRequest) (*symbol_service.SymbolOverview, error)
+	Get(ctx context.Context, uuid string) (*instrument_service.Instrument, error)
+	GetPaged(ctx context.Context, req *instrument_service.PagedRequest) (*[]*instrument_service.Instrument, uint, error)
+	Overview(ctx context.Context, req *instrument_service.InstrumentRequest) (*instrument_service.InstrumentOverview, error)
 
 	// service methods
-	UpdateAll(ctx context.Context) (*symbol_service.UpdateAllResponse, error)
+	UpdateAll(ctx context.Context) (*instrument_service.UpdateAllResponse, error)
 	recalculateRelevantInstruments(
-		input []*worker_symbol_service.RecalculateSymbolsResponse,
-		ctx context.Context) (*symbol_service.UpdateAllResponse, error)
-	symbolDataToEntity(in *[]*proto_models.Symbol) ([]*model.Symbol, error)
-	filterUnusableSymbols(symbols *[]*proto_models.Symbol) *[]*proto_models.Symbol
+		input []*instrument_service.InstrumentStatus,
+		ctx context.Context) (*instrument_service.UpdateAllResponse, error)
+	symbolDataToEntity(in *[]*instrument_service.Instrument) ([]*model.Symbol, error)
+	filterUnusableSymbols(symbols *[]*instrument_service.Instruments) *[]*instrument_service.Instrument
 }
 
-type SymbolService struct {
+type InstrumentsService struct {
 	symbolRepository         *repo.SymbolRepository
 	symbolOverviewRepository *repo.SymbolOverviewRepository
 	alphaVantageService      *third_party.AlphaVantageService
 	externalSymbolService    *third_party.ExternalSymbolService
 }
 
-func (s *SymbolService) Get(ctx context.Context, uuid string) (*proto_models.Symbol, error) {
+func NewSymbolService(
+	symbolsRepository *repo.SymbolRepository,
+	symbolOverviewRepository *repo.SymbolOverviewRepository,
+	alphaVantageService *third_party.AlphaVantageService,
+	externalSymbolService *third_party.ExternalSymbolService) *InstrumentsService {
+	return &InstrumentsService{
+		symbolRepository:         symbolsRepository,
+		symbolOverviewRepository: symbolOverviewRepository,
+		alphaVantageService:      alphaVantageService,
+		externalSymbolService:    externalSymbolService,
+	}
+}
+
+func (s *InstrumentsService) Get(ctx context.Context, uuid string) (*instrument_service.Instrument, error) {
 	sym, err := s.symbolRepository.GetByUuid(ctx, uuid)
 	if err != nil {
 		return nil, status.Error(codes.NotFound, "invalid symbol uuid")
@@ -56,20 +66,9 @@ func (s *SymbolService) Get(ctx context.Context, uuid string) (*proto_models.Sym
 	return sym.ToProto(), nil
 }
 
-func NewSymbolService(
-	symbolsRepository *repo.SymbolRepository,
-	symbolOverviewRepository *repo.SymbolOverviewRepository,
-	alphaVantageService *third_party.AlphaVantageService,
-	externalSymbolService *third_party.ExternalSymbolService) *SymbolService {
-	return &SymbolService{
-		symbolRepository:         symbolsRepository,
-		symbolOverviewRepository: symbolOverviewRepository,
-		alphaVantageService:      alphaVantageService,
-		externalSymbolService:    externalSymbolService,
-	}
-}
-
-func (s *SymbolService) GetPaged(ctx context.Context, req *symbol_service.GetPagedRequest) (*[]*proto_models.Symbol, uint, error) {
+func (s *InstrumentsService) GetPaged(
+	ctx context.Context,
+	req *instrument_service.PagedRequest) (*[]*instrument_service.Instrument, uint, error) {
 	if req.Filter == nil {
 		return nil, 0, status.Errorf(codes.InvalidArgument, "provide filter")
 	}
@@ -77,7 +76,7 @@ func (s *SymbolService) GetPaged(ctx context.Context, req *symbol_service.GetPag
 		return nil, 0, status.Error(codes.InvalidArgument, "provide order argument")
 	}
 
-	var res []*proto_models.Symbol
+	var res []*instrument_service.Instrument
 	syms, totalItemsCount, err := s.symbolRepository.GetPaged(ctx, req)
 	if err != nil {
 		return nil, 0, err
@@ -90,7 +89,9 @@ func (s *SymbolService) GetPaged(ctx context.Context, req *symbol_service.GetPag
 	return &res, totalItemsCount, nil
 }
 
-func (s *SymbolService) Overview(ctx context.Context, req *symbol_service.SymbolOverviewRequest) (*symbol_service.SymbolOverview, error) {
+func (s *InstrumentsService) Overview(
+	ctx context.Context,
+	req *instrument_service.InstrumentRequest) (*instrument_service.InstrumentOverview, error) {
 	userInfo := ctx.Value("user_info")
 	if userInfo == nil {
 		return nil, status.Error(codes.Unauthenticated, "provide user token")
@@ -127,9 +128,9 @@ func (s *SymbolService) Overview(ctx context.Context, req *symbol_service.Symbol
 	return overview.ToProto(), nil
 }
 
-func (s *SymbolService) UpdateAll(ctx context.Context) (*symbol_service.UpdateAllResponse, error) {
-	oldSymbols, _, err := s.GetPaged(ctx, &symbol_service.GetPagedRequest{
-		Filter: &proto_models.PagedFilter{
+func (s *InstrumentsService) UpdateAll(ctx context.Context) (*instrument_service.UpdateAllResponse, error) {
+	oldSymbols, _, err := s.GetPaged(ctx, &instrument_service.PagedRequest{
+		Filter: &instrument_service.PagedFilter{
 			PageSize:   100000,
 			PageNumber: 1,
 			Order:      "identifier",
@@ -155,24 +156,24 @@ func (s *SymbolService) UpdateAll(ctx context.Context) (*symbol_service.UpdateAl
 	return response, nil
 }
 
-func (s *SymbolService) recalculateRelevantInstruments(
-	input []*worker_symbol_service.RecalculateSymbolsResponse,
-	ctx context.Context) (*symbol_service.UpdateAllResponse, error) {
+func (s *InstrumentsService) recalculateRelevantInstruments(
+	input []*instrument_service.InstrumentStatus,
+	ctx context.Context) (*instrument_service.UpdateAllResponse, error) {
 
-	var createSymbols []*proto_models.Symbol
-	var updateSymbols []*proto_models.Symbol
-	var deleteSymbols []*proto_models.Symbol
+	var createSymbols []*instrument_service.Instrument
+	var updateSymbols []*instrument_service.Instrument
+	var deleteSymbols []*instrument_service.Instrument
 
 	itemsIgnored := int64(0)
 	for _, res := range input {
 		switch res.Type {
-		case worker_symbol_service.RecalculateSymbolsResponse_CREATE:
+		case instrument_service.InstrumentStatus_CREATE:
 			createSymbols = append(createSymbols, res.Symbol)
-		case worker_symbol_service.RecalculateSymbolsResponse_UPDATE:
+		case instrument_service.InstrumentStatus_UPDATE:
 			updateSymbols = append(updateSymbols, res.Symbol)
-		case worker_symbol_service.RecalculateSymbolsResponse_DELETE:
+		case instrument_service.InstrumentStatus_DELETE:
 			deleteSymbols = append(deleteSymbols, res.Symbol)
-		case worker_symbol_service.RecalculateSymbolsResponse_IGNORE:
+		case instrument_service.InstrumentStatus_IGNORE:
 			itemsIgnored++
 		}
 	}
@@ -227,7 +228,7 @@ func (s *SymbolService) recalculateRelevantInstruments(
 		return nil, err
 	}
 
-	return &symbol_service.UpdateAllResponse{
+	return &instrument_service.UpdateAllResponse{
 		ItemsCreated: int64(len(createSymbols)),
 		ItemsUpdated: int64(len(updateSymbols)),
 		ItemsDeleted: int64(len(deleteSymbols)),
@@ -236,7 +237,7 @@ func (s *SymbolService) recalculateRelevantInstruments(
 	}, nil
 }
 
-func (s *SymbolService) symbolDataToEntity(in *[]*proto_models.Symbol) ([]*model.Symbol, error) {
+func (s *InstrumentsService) symbolDataToEntity(in *[]*instrument_service.Instrument) ([]*model.Symbol, error) {
 	var result []*model.Symbol
 
 	for _, sym := range *in {
@@ -246,16 +247,18 @@ func (s *SymbolService) symbolDataToEntity(in *[]*proto_models.Symbol) ([]*model
 	return result, nil
 }
 
-func (s *SymbolService) generateRecalculationResult(newSymbols []*proto_models.Symbol, oldSymbols []*proto_models.Symbol) []*worker_symbol_service.RecalculateSymbolsResponse {
-	var result []*worker_symbol_service.RecalculateSymbolsResponse
-	unique := make(map[string]*worker_symbol_service.RecalculateSymbolsResponse)
-	output := make(chan *worker_symbol_service.RecalculateSymbolsResponse)
+func (s *InstrumentsService) generateRecalculationResult(
+	newSymbols []*instrument_service.Instrument,
+	oldSymbols []*instrument_service.Instrument) []*instrument_service.InstrumentStatus {
+	var result []*instrument_service.InstrumentStatus
+	unique := make(map[string]*instrument_service.InstrumentStatus)
+	output := make(chan *instrument_service.InstrumentStatus)
 
 	go func() {
 		for _, newSym := range newSymbols {
 			if ok, oldSym := common.ContainsSymbol(newSym.Uuid, oldSymbols); !ok {
-				output <- &worker_symbol_service.RecalculateSymbolsResponse{
-					Type:   worker_symbol_service.RecalculateSymbolsResponse_CREATE,
+				output <- &instrument_service.InstrumentStatus{
+					Type:   instrument_service.InstrumentStatus_CREATE,
 					Symbol: newSym,
 				}
 				continue
@@ -269,14 +272,14 @@ func (s *SymbolService) generateRecalculationResult(newSymbols []*proto_models.S
 				// Identifier, ISIN and Market Name are not checked, as they are used in the uuids of the symbols
 				// if any fields are updated, send an update response
 				if shouldUpdate {
-					output <- &worker_symbol_service.RecalculateSymbolsResponse{
-						Type:   worker_symbol_service.RecalculateSymbolsResponse_UPDATE,
+					output <- &instrument_service.InstrumentStatus{
+						Type:   instrument_service.InstrumentStatus_UPDATE,
 						Symbol: newSym,
 					}
 					continue
 				} else {
-					output <- &worker_symbol_service.RecalculateSymbolsResponse{
-						Type:   worker_symbol_service.RecalculateSymbolsResponse_IGNORE,
+					output <- &instrument_service.InstrumentStatus{
+						Type:   instrument_service.InstrumentStatus_IGNORE,
 						Symbol: newSym,
 					}
 				}
@@ -285,8 +288,8 @@ func (s *SymbolService) generateRecalculationResult(newSymbols []*proto_models.S
 
 		for _, sym := range oldSymbols {
 			if ok, _ := common.ContainsSymbol(sym.Uuid, newSymbols); !ok {
-				output <- &worker_symbol_service.RecalculateSymbolsResponse{
-					Type:   worker_symbol_service.RecalculateSymbolsResponse_DELETE,
+				output <- &instrument_service.InstrumentStatus{
+					Type:   instrument_service.InstrumentStatus_DELETE,
 					Symbol: sym,
 				}
 			}
@@ -314,8 +317,8 @@ func (s *SymbolService) generateRecalculationResult(newSymbols []*proto_models.S
 	return result
 }
 
-func (s *SymbolService) filterUnusableSymbols(symbols *[]*proto_models.Symbol) *[]*proto_models.Symbol {
-	var res []*proto_models.Symbol
+func (s *InstrumentsService) filterUnusableSymbols(symbols *[]*instrument_service.Instrument) *[]*instrument_service.Instrument {
+	var res []*instrument_service.Instrument
 
 	for _, sym := range *symbols {
 		switch sym.MarketName {
@@ -335,7 +338,7 @@ func (s *SymbolService) filterUnusableSymbols(symbols *[]*proto_models.Symbol) *
 	return &res
 }
 
-func (s *SymbolService) getAndInsertInstrumentOverview(ctx context.Context, sym *proto_models.Symbol) (*model.InstrumentOverview, error) {
+func (s *InstrumentsService) getAndInsertInstrumentOverview(ctx context.Context, sym *instrument_service.Instrument) (*model.InstrumentOverview, error) {
 	extOverview, err := s.alphaVantageService.GetInstrumentOverview(sym.Identifier)
 	if err != nil {
 		return nil, err
