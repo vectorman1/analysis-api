@@ -43,7 +43,15 @@ func (r *UserRepository) GetByUsername(ctx context.Context, username string) (*m
 
 	var res model.User
 	row := r.db.QueryRow(query, args...)
-	err = row.Scan(&res.ID, &res.Uuid, &res.PrivateRole, &res.Username, &res.Password, &res.CreatedAt, &res.UpdatedAt, &res.DeletedAt)
+	err = row.Scan(
+		&res.ID,
+		&res.Uuid,
+		&res.PrivateRole,
+		&res.Username,
+		&res.Password,
+		&res.CreatedAt,
+		&res.UpdatedAt,
+		&res.DeletedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -141,6 +149,7 @@ func (r *UserRepository) Delete(ctx context.Context, uuid string) error {
 		Update("\"user\".users").
 		Where(squirrel.Eq{"uuid": uuid}).
 		Set("deletedAt", time.Now()).
+		PlaceholderFormat(squirrel.Dollar).
 		ToSql()
 	if err != nil {
 		return err
