@@ -163,29 +163,6 @@ func (s *HistoryService) GetChartBySymbolUuid(
 		return nil, err
 	}
 
-	if len(histories) == 0 || histories[len(histories)-1:][0].ShouldUpdate() {
-		sym, err := s.symbolRepository.GetByUuid(ctx, req.Uuid)
-		if err != nil {
-			return nil, status.Error(codes.NotFound, validationErrors.NoSymbolFound)
-		}
-
-		entries, err := s.UpdateSymbolHistory(ctx, req.Uuid, sym.Identifier)
-		if err != nil {
-			return nil, err
-		} else if entries == 0 {
-			return nil, status.Error(codes.NotFound, validationErrors.NoHistoryFoundForSymbol)
-		}
-
-		if entries > 0 {
-			histories, err = s.historyRepository.GetSymbolHistory(ctx, req.Uuid, req.StartDate.AsTime(), req.EndDate.AsTime(), false)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			return nil, status.Error(codes.NotFound, validationErrors.NoHistoryFoundForSymbol)
-		}
-	}
-
 	var res instrument_service.ChartResponse
 	for _, h := range histories {
 		var values []float64
