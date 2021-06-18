@@ -4,16 +4,16 @@ import (
 	"context"
 	"time"
 
-	"google.golang.org/grpc/grpclog"
+	"github.com/vectorman1/analysis/analysis-api/domain/instrument/service"
 
-	"github.com/vectorman1/analysis/analysis-api/service"
+	"google.golang.org/grpc/grpclog"
 )
 
 type SymbolRecalculationJob struct {
-	symbolService *service.SymbolService
+	symbolService *service.InstrumentsService
 }
 
-func NewSymbolUpdateJob(symbolService *service.SymbolService) *SymbolRecalculationJob {
+func NewSymbolUpdateJob(symbolService *service.InstrumentsService) *SymbolRecalculationJob {
 	return &SymbolRecalculationJob{symbolService: symbolService}
 }
 

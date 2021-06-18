@@ -4,7 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/vectorman1/analysis/analysis-api/service"
+	"github.com/vectorman1/analysis/analysis-api/domain/instrument/service"
+
 	"google.golang.org/grpc/grpclog"
 )
 

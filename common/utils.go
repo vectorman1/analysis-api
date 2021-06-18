@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"math/rand"
 
+	"github.com/vectorman1/analysis/analysis-api/generated/instrument_service"
+
 	"github.com/jackc/pgx"
 
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/status"
-
-	"github.com/vectorman1/analysis/analysis-api/generated/proto_models"
 )
 
 func FormatOrderQuery(attr string, asc bool) string {
@@ -23,7 +23,7 @@ func FormatOrderQuery(attr string, asc bool) string {
 	return fmt.Sprintf("%s %s", attr, d)
 }
 
-func ContainsSymbol(uuid string, arr []*proto_models.Symbol) (bool, *proto_models.Symbol) {
+func ContainsSymbol(uuid string, arr []*instrument_service.Instrument) (bool, *instrument_service.Instrument) {
 	for _, v := range arr {
 		if v.Uuid == uuid {
 			return true, v
@@ -70,4 +70,16 @@ func RandomStringWithLength(n int) string {
 	}
 
 	return string(b)
+}
+
+func RollingAverage(n int) func(float64) float64 {
+	bins := make([]float64, n)
+	avg := 0.0
+	i := 0
+	return func(x float64) float64 {
+		avg += (x - bins[i]) / float64(n)
+		bins[i] = x
+		i = (i + 1) % n
+		return avg
+	}
 }

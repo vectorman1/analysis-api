@@ -7,37 +7,34 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/vectorman1/analysis/analysis-api/generated/history_service"
-
+	"github.com/vectorman1/analysis/analysis-api/generated/instrument_service"
 	"github.com/vectorman1/analysis/analysis-api/generated/user_service"
-	"github.com/vectorman1/analysis/analysis-api/service/server"
 
-	"github.com/vectorman1/analysis/analysis-api/generated/symbol_service"
+	instrument_present "github.com/vectorman1/analysis/analysis-api/domain/instrument/present"
+	user_present "github.com/vectorman1/analysis/analysis-api/domain/user/present"
+
 	"github.com/vectorman1/analysis/analysis-api/middleware"
 	logger_grpc "github.com/vectorman1/analysis/analysis-api/middleware/logger-grpc"
 	"google.golang.org/grpc"
 )
 
 type GRPCServer struct {
-	Context              context.Context
-	Port                 string
-	symbolServiceServer  symbol_service.SymbolServiceServer
-	userServiceServer    user_service.UserServiceServer
-	historyServiceServer history_service.HistoryServiceServer
+	Context             context.Context
+	Port                string
+	symbolServiceServer *instrument_present.InstrumentServiceServer
+	userServiceServer   *user_present.UserServiceServer
 }
 
 func NewGRPCServer(
 	ctx context.Context,
 	port string,
-	symbolServiceServer symbol_service.SymbolServiceServer,
-	userServiceServer *server.UserServiceServer,
-	historyServiceServer *server.HistoryServiceServer) *GRPCServer {
+	instrumentServiceServer *instrument_present.InstrumentServiceServer,
+	userServiceServer *user_present.UserServiceServer) *GRPCServer {
 	return &GRPCServer{
-		Context:              ctx,
-		Port:                 port,
-		symbolServiceServer:  symbolServiceServer,
-		userServiceServer:    userServiceServer,
-		historyServiceServer: historyServiceServer,
+		Context:             ctx,
+		Port:                port,
+		symbolServiceServer: instrumentServiceServer,
+		userServiceServer:   userServiceServer,
 	}
 }
 
@@ -54,9 +51,8 @@ func (s *GRPCServer) Run() error {
 	server := grpc.NewServer(opts...)
 
 	// register services
-	symbol_service.RegisterSymbolServiceServer(server, s.symbolServiceServer)
+	instrument_service.RegisterInstrumentServiceServer(server, s.symbolServiceServer)
 	user_service.RegisterUserServiceServer(server, s.userServiceServer)
-	history_service.RegisterHistoryServiceServer(server, s.historyServiceServer)
 
 	// graceful shutdown
 	c := make(chan os.Signal, 1)

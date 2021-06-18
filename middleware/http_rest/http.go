@@ -4,8 +4,6 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/vectorman1/analysis/analysis-api/model/service"
-
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -19,17 +17,17 @@ func HandleMuxError(ctx context.Context, mux *runtime.ServeMux, marshaler runtim
 		switch st.Code() {
 		case codes.Unimplemented:
 			w.WriteHeader(http.StatusMethodNotAllowed)
-			res, _ := marshaler.Marshal(&service.HttpResponse{Code: http.StatusMethodNotAllowed, Message: st.Message(), Details: st.Details()})
+			res, _ := marshaler.Marshal(&HttpResponse{Code: http.StatusMethodNotAllowed, Message: st.Message(), Details: st.Details()})
 			_, _ = w.Write(res)
 			return
 		case codes.InvalidArgument:
 			w.WriteHeader(http.StatusBadRequest)
-			res, _ := marshaler.Marshal(&service.HttpResponse{Code: http.StatusBadRequest, Message: st.Message(), Details: st.Details()})
+			res, _ := marshaler.Marshal(&HttpResponse{Code: http.StatusBadRequest, Message: st.Message(), Details: st.Details()})
 			_, _ = w.Write(res)
 			return
 		default:
 			w.WriteHeader(http.StatusInternalServerError)
-			res, _ := marshaler.Marshal(&service.HttpResponse{Code: http.StatusInternalServerError, Message: st.Message()})
+			res, _ := marshaler.Marshal(&HttpResponse{Code: http.StatusInternalServerError, Message: st.Message()})
 			_, _ = w.Write(res)
 			return
 		}
