@@ -6,7 +6,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-type Symbol struct {
+type Instrument struct {
 	ID           uint        `json:"-"`
 	Uuid         pgtype.UUID `json:"uuid"`
 	CurrencyCode string      `json:"currency_code"`
@@ -23,14 +23,14 @@ type Symbol struct {
 	DeletedAt pgtype.Timestamptz `json:"deleted_at"`
 }
 
-func (Symbol) FromProtoObject(sym *instrument_service.Instrument) *Symbol {
+func (Instrument) FromProtoObject(sym *instrument_service.Instrument) *Instrument {
 	moq := pgtype.Float4{}
 	moq.Set(sym.MinimumOrderQuantity)
 
 	u := pgtype.UUID{}
 	u.Set(sym.Uuid)
 
-	res := &Symbol{
+	res := &Instrument{
 		Uuid:                 u,
 		CurrencyCode:         sym.CurrencyCode,
 		Isin:                 sym.Isin,
@@ -44,7 +44,7 @@ func (Symbol) FromProtoObject(sym *instrument_service.Instrument) *Symbol {
 	return res
 }
 
-func (s *Symbol) ToProto() *instrument_service.Instrument {
+func (s *Instrument) ToProto() *instrument_service.Instrument {
 	// db constraint
 	var u string
 	s.Uuid.AssignTo(&u)

@@ -8,8 +8,8 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-type InstrumentOverview struct {
-	SymbolUuid                 string
+type Overview struct {
+	InstrumentUuid             string
 	Description                string
 	Country                    string
 	Sector                     string
@@ -65,11 +65,11 @@ type InstrumentOverview struct {
 	UpdatedAt                  time.Time
 }
 
-func (s *InstrumentOverview) ShouldUpdate() bool {
+func (s *Overview) ShouldUpdate() bool {
 	return time.Since(s.UpdatedAt) > 7*(24*time.Hour)
 }
 
-func (s *InstrumentOverview) ToProto() *instrument_service.InstrumentOverview {
+func (s *Overview) ToProto() *instrument_service.InstrumentOverview {
 	latestQuarter := timestamppb.New(s.LatestQuarter)
 	updatedAt := timestamppb.New(s.UpdatedAt)
 	dividendDate := timestamppb.New(s.DividendDate)

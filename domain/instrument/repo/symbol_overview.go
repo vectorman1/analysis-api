@@ -11,23 +11,23 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type SymbolOverviewContract interface {
+type overviewRepository interface {
 	Insert(ctx context.Context, overview *model.InstrumentOverviewResponse) (bool, error)
 	GetBySymbolUuid(ctx context.Context, uuid string) (*model.InstrumentOverviewResponse, error)
 	Delete(ctx context.Context, uuid string) error
 }
 
-type SymbolOverviewRepository struct {
+type OverviewRepository struct {
 	mondodb *mongo.Database
 }
 
-func NewSymbolOverviewRepository(mongodb *mongo.Database) *SymbolOverviewRepository {
-	return &SymbolOverviewRepository{
+func NewOverviewRepository(mongodb *mongo.Database) *OverviewRepository {
+	return &OverviewRepository{
 		mondodb: mongodb,
 	}
 }
 
-func (r *SymbolOverviewRepository) Insert(ctx context.Context, overview *model.InstrumentOverview) (bool, error) {
+func (r *OverviewRepository) Insert(ctx context.Context, overview *model.Overview) (bool, error) {
 	_, err := r.mondodb.Collection(common.OverviewsCollection).
 		InsertOne(ctx, overview)
 	if err != nil {
@@ -37,10 +37,10 @@ func (r *SymbolOverviewRepository) Insert(ctx context.Context, overview *model.I
 	return true, nil
 }
 
-func (r *SymbolOverviewRepository) GetByInstrumentUuid(ctx context.Context, uuid string) (*model.InstrumentOverview, error) {
-	var overview model.InstrumentOverview
+func (r *OverviewRepository) GetByInstrumentUuid(ctx context.Context, uuid string) (*model.Overview, error) {
+	var overview model.Overview
 	err := r.mondodb.Collection(common.OverviewsCollection).
-		FindOne(ctx, bson.M{"symboluuid": uuid}).
+		FindOne(ctx, bson.M{"instrument_uuid": uuid}).
 		Decode(&overview)
 	if err != nil {
 		return nil, err
@@ -49,9 +49,9 @@ func (r *SymbolOverviewRepository) GetByInstrumentUuid(ctx context.Context, uuid
 	return &overview, nil
 }
 
-func (r *SymbolOverviewRepository) Delete(ctx context.Context, uuid string) error {
+func (r *OverviewRepository) Delete(ctx context.Context, uuid string) error {
 	_, err := r.mondodb.Collection(common.OverviewsCollection).
-		DeleteOne(ctx, bson.M{"symboluuid": uuid})
+		DeleteOne(ctx, bson.M{"instrument_uuid": uuid})
 	if err != nil {
 		return err
 	}

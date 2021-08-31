@@ -33,20 +33,20 @@ type InstrumentsServiceContract interface {
 	recalculateRelevantInstruments(
 		input []*instrument_service.InstrumentStatus,
 		ctx context.Context) (*instrument_service.UpdateAllResponse, error)
-	symbolDataToEntity(in *[]*instrument_service.Instrument) ([]*model.Symbol, error)
+	symbolDataToEntity(in *[]*instrument_service.Instrument) ([]*model.Instrument, error)
 	filterUnusableSymbols(symbols *[]*instrument_service.Instruments) *[]*instrument_service.Instrument
 }
 
 type InstrumentsService struct {
-	symbolRepository         *repo.SymbolRepository
-	symbolOverviewRepository *repo.SymbolOverviewRepository
+	symbolRepository         *repo.InstrumentRepository
+	symbolOverviewRepository *repo.OverviewRepository
 	alphaVantageService      *third_party.AlphaVantageService
 	externalSymbolService    *third_party.ExternalSymbolService
 }
 
 func NewSymbolService(
-	symbolsRepository *repo.SymbolRepository,
-	symbolOverviewRepository *repo.SymbolOverviewRepository,
+	symbolsRepository *repo.InstrumentRepository,
+	symbolOverviewRepository *repo.OverviewRepository,
 	alphaVantageService *third_party.AlphaVantageService,
 	externalSymbolService *third_party.ExternalSymbolService) *InstrumentsService {
 	return &InstrumentsService{
@@ -237,11 +237,11 @@ func (s *InstrumentsService) recalculateRelevantInstruments(
 	}, nil
 }
 
-func (s *InstrumentsService) symbolDataToEntity(in *[]*instrument_service.Instrument) ([]*model.Symbol, error) {
-	var result []*model.Symbol
+func (s *InstrumentsService) symbolDataToEntity(in *[]*instrument_service.Instrument) ([]*model.Instrument, error) {
+	var result []*model.Instrument
 
 	for _, sym := range *in {
-		result = append(result, model.Symbol{}.FromProtoObject(sym))
+		result = append(result, model.Instrument{}.FromProtoObject(sym))
 	}
 
 	return result, nil
@@ -338,7 +338,7 @@ func (s *InstrumentsService) filterUnusableSymbols(symbols *[]*instrument_servic
 	return &res
 }
 
-func (s *InstrumentsService) getAndInsertInstrumentOverview(ctx context.Context, sym *instrument_service.Instrument) (*model.InstrumentOverview, error) {
+func (s *InstrumentsService) getAndInsertInstrumentOverview(ctx context.Context, sym *instrument_service.Instrument) (*model.Overview, error) {
 	extOverview, err := s.alphaVantageService.GetInstrumentOverview(sym.Identifier)
 	if err != nil {
 		return nil, err

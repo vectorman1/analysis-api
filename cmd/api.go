@@ -104,9 +104,9 @@ func RunServer() error {
 
 func initializeServices(ctx context.Context, pgConnPool *pgx.ConnPool, mongoDatabase *mongo.Database, config *common.Config) (*grpc_server.GRPCServer, error) {
 	historyRepository := instruments_repo.NewHistoryRepository(mongoDatabase)
-	symbolOverviewRepository := instruments_repo.NewSymbolOverviewRepository(mongoDatabase)
+	symbolOverviewRepository := instruments_repo.NewOverviewRepository(mongoDatabase)
 
-	symbolRepository := instruments_repo.NewSymbolRepository(pgConnPool)
+	symbolRepository := instruments_repo.NewInstrumentRepository(pgConnPool)
 	userRepository := user_repo.NewUserRepository(pgConnPool)
 
 	trading212Service := instruments_third_party.NewTrading212Service()

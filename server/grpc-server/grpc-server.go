@@ -38,7 +38,7 @@ func NewGRPCServer(
 	}
 }
 
-// RunServer runs gRPC service to publish our services
+// Run runs gRPC service to publish our services
 func (s *GRPCServer) Run() error {
 	listen, err := net.Listen("tcp", ":"+s.Port)
 	if err != nil {

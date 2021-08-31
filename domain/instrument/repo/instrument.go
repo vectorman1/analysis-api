@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/vectorman1/analysis/analysis-api/generated/instrument_service"
 
 	"github.com/vectorman1/analysis/analysis-api/domain/instrument/model"
@@ -18,28 +21,28 @@ import (
 	"github.com/vectorman1/analysis/analysis-api/common"
 )
 
-type SymbolRepo interface {
-	GetPaged(ctx context.Context, req *instrument_service.PagedRequest) (*[]model.Symbol, uint, error)
-	GetByUuid(ctx context.Context, uuid string) (*model.Symbol, error)
-	InsertBulk(tx *pgx.Tx, ctx context.Context, symbols []*model.Symbol) (bool, error)
-	DeleteBulk(tx *pgx.Tx, ctx context.Context, symbols []*model.Symbol) (bool, error)
-	UpdateBulk(tx *pgx.Tx, ctx context.Context, symbols []*model.Symbol) (bool, error)
+type instrumentRepository interface {
+	GetPaged(ctx context.Context, req *instrument_service.PagedRequest) (*[]model.Instrument, uint, error)
+	GetByUuid(ctx context.Context, uuid string) (*model.Instrument, error)
+	InsertBulk(tx *pgx.Tx, ctx context.Context, symbols []*model.Instrument) (bool, error)
+	DeleteBulk(tx *pgx.Tx, ctx context.Context, symbols []*model.Instrument) (bool, error)
+	UpdateBulk(tx *pgx.Tx, ctx context.Context, symbols []*model.Instrument) (bool, error)
 
 	BeginTx(ctx *context.Context, options *pgx.TxOptions) (*pgx.Tx, error)
 }
 
-type SymbolRepository struct {
+type InstrumentRepository struct {
 	db *pgx.ConnPool
 }
 
-func NewSymbolRepository(db *pgx.ConnPool) *SymbolRepository {
-	return &SymbolRepository{
+func NewInstrumentRepository(db *pgx.ConnPool) *InstrumentRepository {
+	return &InstrumentRepository{
 		db: db,
 	}
 }
 
 // GetPaged returns a paged response of symbols stored
-func (r *SymbolRepository) GetPaged(ctx context.Context, req *instrument_service.PagedRequest) (*[]model.Symbol, uint, error) {
+func (r *InstrumentRepository) GetPaged(ctx context.Context, req *instrument_service.PagedRequest) (*[]model.Instrument, uint, error) {
 	// generate query
 	order := common.FormatOrderQuery(req.Filter.Order, req.Filter.Ascending)
 	queryBuilder := squirrel.
@@ -49,7 +52,7 @@ func (r *SymbolRepository) GetPaged(ctx context.Context, req *instrument_service
 		Offset((req.Filter.PageNumber - 1) * req.Filter.PageSize).
 		Limit(req.Filter.PageSize).
 		Where("deletedAt is NULL").
-		PlaceholderFormat(squirrel.Dollar)
+		PlaceholderFormat(squirrel.Dollar) // pgsql placeholders
 
 	if req.Filter.Text != "" {
 		req.Filter.Text = fmt.Sprintf("%%%s%%", req.Filter.Text)
@@ -72,10 +75,10 @@ func (r *SymbolRepository) GetPaged(ctx context.Context, req *instrument_service
 	defer rows.Close()
 
 	// read all resulting rows
-	var result []model.Symbol
+	var result []model.Instrument
 	var totalItems uint
 	for rows.Next() {
-		sym := model.Symbol{}
+		sym := model.Instrument{}
 		if err = rows.Scan(
 			&sym.ID,
 			&sym.Uuid,
@@ -98,12 +101,13 @@ func (r *SymbolRepository) GetPaged(ctx context.Context, req *instrument_service
 	return &result, totalItems, nil
 }
 
-func (r *SymbolRepository) GetByUuid(ctx context.Context, symbolUuid string) (*model.Symbol, error) {
-	u, err := uuid.FromString(symbolUuid)
+func (r *InstrumentRepository) GetByUuid(ctx context.Context, instrumentUuid string) (*model.Instrument, error) {
+	u, err := uuid.FromString(instrumentUuid)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.InvalidArgument, "invalid uuid")
 	}
 
+	// TODO: Move to mongodb
 	queryBuilder := squirrel.
 		Select("*").
 		From("analysis.symbols").
@@ -114,7 +118,7 @@ func (r *SymbolRepository) GetByUuid(ctx context.Context, symbolUuid string) (*m
 		return nil, err
 	}
 
-	sym := model.Symbol{}
+	sym := model.Instrument{}
 	row := r.db.QueryRowEx(ctx, query, &pgx.QueryExOptions{})
 	if err = row.Scan(
 		&sym.ID,
@@ -136,13 +140,13 @@ func (r *SymbolRepository) GetByUuid(ctx context.Context, symbolUuid string) (*m
 }
 
 // InsertBulk inserts the slice in a single transaction in batches and returns success and error
-func (r *SymbolRepository) InsertBulk(tx *pgx.Tx, ctx context.Context, symbols []*model.Symbol) (bool, error) {
+func (r *InstrumentRepository) InsertBulk(tx *pgx.Tx, ctx context.Context, symbols []*model.Instrument) (bool, error) {
 	// split inserts in batches
-	workList := make(chan []*model.Symbol)
+	workList := make(chan []*model.Instrument)
 	go func() {
 		defer close(workList)
 		batchSize := 1000
-		var stack []*model.Symbol
+		var stack []*model.Instrument
 		for _, sym := range symbols {
 			stack = append(stack, sym)
 			if len(stack) == batchSize {
@@ -189,13 +193,13 @@ func (r *SymbolRepository) InsertBulk(tx *pgx.Tx, ctx context.Context, symbols [
 }
 
 // DeleteBulk sets the Deleted At values for bulk symbols to now
-func (r *SymbolRepository) DeleteBulk(tx *pgx.Tx, ctx context.Context, symbols []*model.Symbol) (bool, error) {
+func (r *InstrumentRepository) DeleteBulk(tx *pgx.Tx, ctx context.Context, symbols []*model.Instrument) (bool, error) {
 	// split updates in batches
-	workList := make(chan []*model.Symbol)
+	workList := make(chan []*model.Instrument)
 	go func() {
 		defer close(workList)
 		batchSize := 1000
-		var stack []*model.Symbol
+		var stack []*model.Instrument
 		for _, sym := range symbols {
 			stack = append(stack, sym)
 			if len(stack) == batchSize {
@@ -237,13 +241,13 @@ func (r *SymbolRepository) DeleteBulk(tx *pgx.Tx, ctx context.Context, symbols [
 
 // UpdateBulk updates all columns of the symbol with the matching uuid
 // with the passed symbol values
-func (r *SymbolRepository) UpdateBulk(tx *pgx.Tx, ctx context.Context, symbols []*model.Symbol) (bool, error) {
+func (r *InstrumentRepository) UpdateBulk(tx *pgx.Tx, ctx context.Context, symbols []*model.Instrument) (bool, error) {
 	// split updates in batches
-	workList := make(chan []*model.Symbol)
+	workList := make(chan []*model.Instrument)
 	go func() {
 		defer close(workList)
 		batchSize := 1000
-		var stack []*model.Symbol
+		var stack []*model.Instrument
 		for _, sym := range symbols {
 			stack = append(stack, sym)
 			if len(stack) == batchSize {
@@ -286,7 +290,7 @@ func (r *SymbolRepository) UpdateBulk(tx *pgx.Tx, ctx context.Context, symbols [
 }
 
 // BeginTx starts a new transaction on the given context
-func (r *SymbolRepository) BeginTx(ctx *context.Context, options *pgx.TxOptions) (*pgx.Tx, error) {
+func (r *InstrumentRepository) BeginTx(ctx *context.Context, options *pgx.TxOptions) (*pgx.Tx, error) {
 	tx, err := r.db.BeginEx(*ctx, options)
 	if err != nil {
 		return nil, err

@@ -6,7 +6,7 @@ import (
 )
 
 type InstrumentOverviewResponse struct {
-	Symbol                     string `json:"Symbol"`
+	Symbol                     string `json:"Instrument"`
 	AssetType                  string `json:"AssetType"`
 	Name                       string `json:"Name"`
 	Description                string `json:"Description"`
@@ -67,7 +67,7 @@ type InstrumentOverviewResponse struct {
 	LastSplitDate              string `json:"LastSplitDate"`
 }
 
-func (s *InstrumentOverviewResponse) ToEntity(uuid string) *InstrumentOverview {
+func (s *InstrumentOverviewResponse) ToEntity(uuid string) *Overview {
 	fullTimeEmployees, _ := strconv.ParseInt(s.FullTimeEmployees, 10, 64)
 	latestQuarter, _ := time.Parse("2006-01-02", s.LatestQuarter)
 	marketCapitalization, _ := strconv.ParseInt(s.MarketCapitalization, 10, 64)
@@ -114,8 +114,8 @@ func (s *InstrumentOverviewResponse) ToEntity(uuid string) *InstrumentOverview {
 	exDividendDate, _ := time.Parse("2006-01-02", s.ExDividendDate)
 	lastSplitDate, _ := time.Parse("2006-01-02", s.LastSplitDate)
 
-	return &InstrumentOverview{
-		SymbolUuid:                 uuid,
+	return &Overview{
+		InstrumentUuid:             uuid,
 		Description:                s.Description,
 		Country:                    s.Country,
 		Sector:                     s.Sector,

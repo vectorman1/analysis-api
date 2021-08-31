@@ -29,16 +29,16 @@ type HistoryServiceContract interface {
 type HistoryService struct {
 	yahooService             *third_party.YahooService
 	historyRepository        *repo.HistoryRepository
-	symbolRepository         *repo.SymbolRepository
-	symbolOverviewRepository *repo.SymbolOverviewRepository
+	symbolRepository         *repo.InstrumentRepository
+	symbolOverviewRepository *repo.OverviewRepository
 	reportService            *ReportService
 }
 
 func NewHistoryService(
 	yahooService *third_party.YahooService,
 	historicalRepository *repo.HistoryRepository,
-	symbolRepository *repo.SymbolRepository,
-	symbolOverviewRepository *repo.SymbolOverviewRepository,
+	symbolRepository *repo.InstrumentRepository,
+	symbolOverviewRepository *repo.OverviewRepository,
 	reportService *ReportService) *HistoryService {
 	return &HistoryService{
 		yahooService:             yahooService,
