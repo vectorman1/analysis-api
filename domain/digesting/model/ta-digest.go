@@ -11,12 +11,12 @@ const (
 )
 
 type TADigestRequest struct {
-	SymbolUuid      string
+	InstrumentUuid  string
 	ConsecutiveDays int
 	TriggerType     TriggerType
 	SourceProperty  string
 	TargetProperty  string
-	TargetNumber    int
+	TargetNumber    int // used in case the trigger is a range from the source prop
 	StartDate       time.Time
 	EndDate         time.Time
 }
