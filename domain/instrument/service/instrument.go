@@ -99,7 +99,7 @@ func (s *InstrumentsService) Overview(
 
 	symbol, err := s.symbolRepository.GetByUuid(ctx, req.Uuid)
 	if err != nil {
-		return nil, status.Error(codes.NotFound, validationErrors.NoSymbolFound)
+		return nil, status.Error(codes.NotFound, validationErrors.NoInstrumentFound)
 	}
 	psym := symbol.ToProto()
 
@@ -107,7 +107,7 @@ func (s *InstrumentsService) Overview(
 	if err != nil {
 		newOverview, err := s.getAndInsertInstrumentOverview(ctx, psym)
 		if err != nil {
-			return nil, status.Error(codes.NotFound, validationErrors.NoOverviewFoundForSymbol)
+			return nil, status.Error(codes.NotFound, validationErrors.NoOverviewFound)
 		}
 
 		overview = newOverview
@@ -119,7 +119,7 @@ func (s *InstrumentsService) Overview(
 
 		newOverview, err := s.getAndInsertInstrumentOverview(ctx, psym)
 		if err != nil {
-			return nil, status.Error(codes.NotFound, validationErrors.NoOverviewFoundForSymbol)
+			return nil, status.Error(codes.NotFound, validationErrors.NoOverviewFound)
 		}
 
 		overview = newOverview
