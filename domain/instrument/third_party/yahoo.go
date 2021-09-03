@@ -23,7 +23,7 @@ func NewYahooService() *YahooService {
 	return &YahooService{}
 }
 
-func (s *YahooService) GetIdentifierHistory(symUuid string, identifier string, start time.Time, end time.Time) (*[]model.History, error) {
+func (s *YahooService) GetIdentifierHistory(instrumentUuid string, identifier string, start time.Time, end time.Time) ([]model.History, error) {
 	params := &chart.Params{
 		Symbol:   identifier,
 		Interval: datetime.OneDay,
@@ -44,21 +44,21 @@ func (s *YahooService) GetIdentifierHistory(symUuid string, identifier string, s
 		timestamp := time.Unix(int64(bar.Timestamp), 0)
 
 		result = append(result, model.History{
-			SymbolUuid: symUuid,
-			Open:       open,
-			Close:      cl,
-			High:       high,
-			Low:        low,
-			Volume:     int64(bar.Volume),
-			AdjClose:   adjClose,
-			Timestamp:  timestamp,
-			CreatedAt:  time.Now(),
+			InstrumentUuid: instrumentUuid,
+			Open:           open,
+			Close:          cl,
+			High:           high,
+			Low:            low,
+			Volume:         int64(bar.Volume),
+			AdjClose:       adjClose,
+			Timestamp:      timestamp,
+			CreatedAt:      time.Now(),
 		})
 	}
 
 	if err := iter.Err(); err != nil {
-		return nil, status.Error(codes.FailedPrecondition, "new history data was null")
+		return nil, status.Error(codes.Internal, "error while iterating history from yahoo")
 	}
 
-	return &result, nil
+	return result, nil
 }
