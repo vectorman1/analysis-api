@@ -1,7 +1,14 @@
 package errors
 
+// Front-end displayed error messages
+
 const WrongUsernameOrPassword = `Wrong username or password`
 const InvalidUsernameOrPassword = `Invalid username or password`
-const NoHistoryFoundForSymbol = `No history found for symbol`
-const NoOverviewFoundForSymbol = `No overview found for symbol`
-const NoSymbolFound = `No symbol with matching uuid`
+
+// Back-end error messages
+
+const NoHistoryFound = `no history found`
+const NoOverviewFound = `no overview found`
+const NoInstrumentFound = `no instrument found`
+const OutputtedTimeSeriesMismatchedInputHistoriesLen = `outputted time series mismatched input histories`
+const FailedToAddCandleToTimeSeries = `failed to add to time-series`
