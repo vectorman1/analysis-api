@@ -45,14 +45,14 @@ type LastHistory struct {
 }
 
 type History struct {
-	SymbolUuid string
-	Calculated bool
-	Open       float64
-	Close      float64
-	High       float64
-	Low        float64
-	Volume     int64
-	AdjClose   float64
+	InstrumentUuid string
+	Calculated     bool
+	Open           float64
+	Close          float64
+	High           float64
+	Low            float64
+	Volume         int64
+	AdjClose       float64
 
 	Trend Trend
 	MA    MA

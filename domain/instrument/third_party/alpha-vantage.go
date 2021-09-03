@@ -59,7 +59,7 @@ func (s *AlphaVantageService) GetInstrumentOverview(symbolName string) (*model.I
 		return nil, err
 	}
 	if result.Description == "" {
-		return nil, status.Error(codes.NotFound, validationErrors.NoOverviewFoundForSymbol)
+		return nil, status.Error(codes.NotFound, validationErrors.NoOverviewFound)
 	}
 
 	return result, nil
