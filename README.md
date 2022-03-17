@@ -12,6 +12,4 @@ Protobuf definitions are found in the respective domain's services folder under 
 
 Service specs can be found then in `./api/swagger/v1/{service-name}.swagger.json` - they can then be imported in Postman or similar.
 
-Currently, the application is deployed and operates as a monolith, however it's structured through DDD - this means potential splitting to microservices in need of scaling would be trivial.
-
 Explore the swagger spec for available endpoints.
